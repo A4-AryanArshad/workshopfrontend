@@ -5,7 +5,7 @@ import Footer from './Footer';
 
 const LoginLogo = () => (
   <div style={{ textAlign: 'center', marginBottom: 32 }}>
-    <img id="imager1" src="./RLogo.png"/>
+    <img id="imager11" src="./nlogo.png"/>
   </div>
 );
 
