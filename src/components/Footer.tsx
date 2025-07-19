@@ -35,7 +35,7 @@ const Footer: React.FC = () => {
       <div className="footer-container">
         <div className="footer-col logo-col" ref={el => { colRefs.current[0] = el; }}>
           <div className="footer-logo">
-          <img id="imager1" src="/RLogo.png"/>
+          <img id="imager1" src="/nlogo.png"/>
           </div>
           <div className="footer-desc">
             Professional automotive services with a commitment to honesty, reliability, and exceptional results.

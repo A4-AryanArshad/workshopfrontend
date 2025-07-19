@@ -73,7 +73,7 @@ const Navbar: React.FC = () => {
     return (
       <nav className="new-navbar" ref={navRef}>
         <div className="new-navbar-logo">
-          <img id="imager1" src="/RLogo.png"/>
+          <img id="imager1" src="/nlogo.png"/>
         </div>
         {isMobile && (
           <button
@@ -102,7 +102,7 @@ const Navbar: React.FC = () => {
     return (
       <nav className="new-navbar" ref={navRef}>
         <div className="new-navbar-logo">
-          <img id="imager1" src="/RLogo.png"/>
+          <img id="imager1" src="/nlogo.png"/>
         </div>
         {isMobile && (
           <button
@@ -135,7 +135,7 @@ const Navbar: React.FC = () => {
   return (
     <nav className="new-navbar" ref={navRef}>
       <div className="new-navbar-logo">
-        <img id="imager1" src="./RLogo.png"/>
+        <img id="imager1" src="/nlogo.png"/>
       </div>
       {isMobile && (
         <button

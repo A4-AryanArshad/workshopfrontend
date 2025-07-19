@@ -42,7 +42,7 @@ const Home: React.FC = () => {
       <main className="new-hero-section">
         <div className="new-hero-center" ref={heroTextRef}>
           <div className="new-hero-logo">
-          <img id="imager2" src="./RLogo.png"/>
+          <img id="imager2" src="/nlogo.png"/>
           </div>
           <div className="new-hero-label">MECHANICS</div>
           <h1 className="new-hero-title">Professional<br/>Automotive Services</h1>
