@@ -293,6 +293,11 @@
     bottom: -20px !important;
   }
 }
+@media (max-width: 1024px) {
+  .scroll-indicator {
+    bottom: -20px !important;
+  }
+}
 
 /* Services Section */
 .services-section {
