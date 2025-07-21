@@ -125,7 +125,7 @@ const ContactPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
                 <LocationIcon />
                 <div>
-                  <div style={{ color: '#bdbdbd', fontWeight: 500, fontSize: '1.05rem' }}>North London Workshop</div>
+                  <div style={{ color: '#bdbdbd', fontWeight: 500, fontSize: '1.05rem' }}>North London</div>
                   <div style={{ color: '#bdbdbd', fontWeight: 400, fontSize: '1.05rem' }}>London, UK</div>
                 </div>
               </div>
@@ -154,7 +154,7 @@ const ContactPage: React.FC = () => {
               <div style={{ fontWeight: 700, fontSize: '1.1rem', margin: '18px 0 4px 0', color: '#fff' }}>Email</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <EmailIcon />
-                <a href="mailto:bespokechauffeurhire@yahoo.co.uk" style={{ color: iconColor, textDecoration: 'none', fontWeight: 700, fontSize: '1.08rem' }}>bespokechauffeurhire@yahoo.co.uk</a>
+                <a href="mailto:j2mechanicslondon@gmail.com" style={{ color: iconColor, textDecoration: 'none', fontWeight: 700, fontSize: '1.08rem' }}>j2mechanicslondon@gmail.com</a>
               </div>
             </div>
           </div>

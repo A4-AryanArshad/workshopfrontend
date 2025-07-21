@@ -33,7 +33,7 @@
   top: 0;
   left: 0;
   z-index: 100;
-  background: transparent;
+  background: #111111 !important;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -288,6 +288,9 @@
   .new-hero-buttons {
     flex-direction: column;
     gap: 10px;
+  }
+  .scroll-indicator {
+    bottom: 10px !important;
   }
 }
 
@@ -1477,7 +1480,7 @@ padding-top: 80px;
 }
 
 #rre{
-  background-color: black;
+  background-color: #111111;
   padding-top: 90px;
 }
 #ii1{
@@ -1510,7 +1513,7 @@ padding-top: 200px !important;
 }
 
 #upperi{
-  background-color: black;
+  background-color: #111111;
 }
 
 #past{
@@ -1529,7 +1532,7 @@ padding-bottom: 120px !important;
 
 #navvber{
   padding: 40px;
-  background-color: black;
+  background-color: #111111;
 }
 
 #rrrre{
@@ -1548,3 +1551,4 @@ padding-bottom: 120px !important;
 #imager11{
   height: 200px;
 }
+

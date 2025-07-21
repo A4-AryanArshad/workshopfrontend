@@ -13,6 +13,8 @@ import UpcomingAppointmentsPage from './components/UpcomingAppointmentsPage';
 import MessagesPage from './components/MessagesPage';
 import AdminRoute from './components/AdminRoute';
 import AddImagesPage from './components/AddImagesPage';
+import ForgotPasswordPage from './components/ForgotPasswordPage';
+import ResetPasswordPage from './components/ResetPasswordPage';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 const App: React.FC = () => {
@@ -25,6 +27,8 @@ const App: React.FC = () => {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/dashboard" element={<AdminRoute><DashboardPage /></AdminRoute>} />
         <Route path="/dashboard/add-images" element={<AdminRoute><AddImagesPage /></AdminRoute>} />
         <Route path="/dashboard/past-services" element={<PastServicesPage />} />

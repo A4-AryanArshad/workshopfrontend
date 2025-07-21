@@ -48,7 +48,7 @@ const Footer: React.FC = () => {
               <SocialIcon url="https://www.tiktok.com" network="tiktok" style={{ height: 32, width: 32 }} bgColor="#000" fgColor="#FFD600" />
             </a>
             <a href="#" aria-label="Email" className="footer-social">
-              <SocialIcon url="mailto:bespokechauffeurhire@yahoo.co.uk" network="email" style={{ height: 32, width: 32 }} bgColor="#000" fgColor="#FFD600" />
+              <SocialIcon url="mailto:j2mechanicslondon@gmail.com" network="email" style={{ height: 32, width: 32 }} bgColor="#000" fgColor="#FFD600" />
             </a>
           </div>
         </div>
@@ -73,8 +73,8 @@ const Footer: React.FC = () => {
         <div className="footer-col" ref={el => { colRefs.current[3] = el; }}>
           <div className="footer-heading">Contact Us</div>
           <ul className="footer-list">
-            <li>North London Workshop</li>
-            <li><a href="mailto:bespokechauffeurhire@yahoo.co.uk" className="footer-email">bespokechauffeurhire@yahoo.co.uk</a></li>
+            <li>North London</li>
+            <li><a href="mailto:j2mechanicslondon@gmail.com" className="footer-email">j2mechanicslondon@gmail.com</a></li>
           </ul>
         </div>
       </div>

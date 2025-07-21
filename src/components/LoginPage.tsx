@@ -77,7 +77,11 @@ const LoginPage: React.FC = () => {
           <label htmlFor="email" style={{ color: '#eaeaea', fontWeight: 500, marginBottom: 4 }}>Email</label>
           <input id="email" name="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required style={{ background: '#111', color: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem', marginBottom: 8 }} />
           <label htmlFor="password" style={{ color: '#eaeaea', fontWeight: 500, marginBottom: 4 }}>Password</label>
-          <input id="password" name="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required style={{ background: '#111', color: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem', marginBottom: 16 }} />
+          <input id="password" name="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required style={{ background: '#111', color: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem', marginBottom: 8 }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: '0.98rem', color: '#ffd600', cursor: 'pointer' }} onClick={() => navigate('/signup')}>Create Account</span>
+            <span style={{ fontSize: '0.98rem', color: '#ffd600', cursor: 'pointer' }} onClick={() => navigate('/forgot-password')}>Forgotten Password?</span>
+          </div>
           {error && <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>}
           <button type="submit" style={{ background: '#ffd600', color: '#111', fontWeight: 600, border: 'none', borderRadius: 8, padding: '12px 0', fontSize: '1.1rem', marginTop: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 2px 8px #0003' }}>
             <LockIcon /> Login
