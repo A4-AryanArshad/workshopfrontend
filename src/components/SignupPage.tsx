@@ -5,7 +5,11 @@ import Footer from './Footer';
 
 const SignupLogo = () => (
   <div style={{ textAlign: 'center', marginBottom: 32 }}>
-    <img id="imager11" src="./nlogo.png"/>
+    <img 
+      id="imager11" 
+      src="./nlogo.png" 
+      alt="Reliable Mechanics Logo"
+    />
   </div>
 );
 
@@ -29,7 +33,7 @@ const SignupPage: React.FC = () => {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch('https://workshop-backend-ox7a.vercel.app/signup', {
+      const res = await fetch('https://workshop-backend-six.vercel.app/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password })

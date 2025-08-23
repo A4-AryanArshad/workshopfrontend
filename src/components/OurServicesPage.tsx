@@ -3,6 +3,7 @@ import './Home.css';
 import ReadyToExperience from './ReadyToExperience';
 import Footer from './Footer';
 import Navbar from './Navbar';
+import ClientBookingModal from './ClientBookingModal';
 
 const serviceData = [
   {
@@ -61,9 +62,16 @@ const OurServicesPage: React.FC = () => {
   const [selected, setSelected] = useState('All');
   const [expanded, setExpanded] = useState<number | null>(null);
   const [search, setSearch] = useState('');
+  const [isClientBookingOpen, setIsClientBookingOpen] = useState(false);
+  const [selectedServiceForBooking, setSelectedServiceForBooking] = useState<typeof serviceData[0] | null>(null);
 
   const filtered = (selected === 'All' ? serviceData : serviceData.filter(s => s.category === selected))
     .filter(s => s.title.toLowerCase().includes(search.toLowerCase()));
+
+  const handleClientBooking = (service: typeof serviceData[0]) => {
+    setSelectedServiceForBooking(service);
+    setIsClientBookingOpen(true);
+  };
 
   return (
     <>
@@ -121,7 +129,12 @@ const OurServicesPage: React.FC = () => {
                 {expanded === service.id && (
                   <div className="service-card-details">
                     <p>{service.details}</p>
-                    <button className="service-card-book-btn">Book Now →</button>
+                    <button 
+                      className="service-card-book-btn" 
+                      onClick={() => handleClientBooking(service)}
+                    >
+                      Book Now →
+                    </button>
                   </div>
                 )}
               </div>
@@ -132,6 +145,16 @@ const OurServicesPage: React.FC = () => {
       <ReadyToExperience />
       <Footer />
       </div>
+
+      {/* Client Booking Modal */}
+      <ClientBookingModal
+        isOpen={isClientBookingOpen}
+        onClose={() => {
+          setIsClientBookingOpen(false);
+          setSelectedServiceForBooking(null);
+        }}
+        selectedService={selectedServiceForBooking}
+      />
     </>
   );
 };

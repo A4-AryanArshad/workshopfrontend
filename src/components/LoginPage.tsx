@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 
 const LoginLogo = () => (
   <div style={{ textAlign: 'center', marginBottom: 32 }}>
-    <img id="imager11" src="./nlogo.png"/>
+    <img 
+      id="imager11" 
+      src="./nlogo.png" 
+      alt="Reliable Mechanics Logo"
+    />
   </div>
 );
 
@@ -18,27 +22,47 @@ const LockIcon = () => (
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  // Check for navigation state on component mount
+  useEffect(() => {
+    if (location.state?.redirectTo) {
+      console.log('🔍 Login - Redirect destination:', location.state.redirectTo);
+      console.log('🔍 Login - Service info:', location.state.serviceInfo);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch('https://workshop-backend-ox7a.vercel.app/login', {
+      const res = await fetch('https://workshop-backend-six.vercel.app/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Login failed');
+      
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.role);
+      localStorage.setItem('userEmail', email); // Store user email for automatic use
+      
       if (data.role === 'admin') {
-        navigate('/dashboard');
+        // Check if there's a redirect destination with service info
+        if (location.state?.redirectTo === '/dashboard' && location.state?.serviceInfo) {
+          console.log('🔍 Login - Redirecting to dashboard with service info:', location.state.serviceInfo);
+          navigate('/dashboard', { 
+            state: location.state.serviceInfo 
+          });
+        } else {
+          navigate('/dashboard');
+        }
       } else {
-        navigate('/'); // You can change this to a user-specific page if needed
+        navigate('/user-dashboard'); // Redirect regular users to user dashboard
       }
     } catch (err: any) {
       setError(err.message);

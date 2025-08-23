@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Footer from './Footer';
 import Navbar from './Navbar';
 
@@ -24,10 +24,69 @@ const EmailIcon = () => (
 );
 
 const ContactPage: React.FC = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [submitError, setSubmitError] = useState('');
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitMessage('');
+    setSubmitError('');
+
+    try {
+      const response = await fetch('https://workshop-backend-six.vercel.app/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSubmitMessage(data.message);
+        setFormData({
+          name: '',
+          email: '',
+          subject: '',
+          message: ''
+        });
+      } else {
+        setSubmitError(data.message || 'Something went wrong. Please try again.');
+      }
+    } catch (error) {
+      setSubmitError('Network error. Please check your connection and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <>
       {/* Responsive styles for ContactPage only */}
       <style>{`
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        
         @media (max-width: 900px) {
           .contact-flex-row {
             flex-direction: column !important;
@@ -76,7 +135,7 @@ const ContactPage: React.FC = () => {
 
       </div>
 
-      <div id="rre">
+      <div id="rree">
       <section  style={{ background: '#111', color: '#eaeaea', minHeight: '100vh', padding: '64px 0 0 0' }}>
         <div  id="mes"style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
           <div style={{ marginBottom: 40 }}>
@@ -89,21 +148,59 @@ const ContactPage: React.FC = () => {
 
           <div className="contact-flex-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 32, alignItems: 'stretch', marginBottom: 32 }}>
             {/* Contact Form */}
-            <form className="contact-form-card" style={{ flex: 2, minWidth: 340, background: '#181818', borderRadius: 16, padding: 32, boxShadow: '0 4px 24px #0006', marginBottom: 0, display: 'flex', flexDirection: 'column', gap: 18, justifyContent: 'center' }}>
+            <form className="contact-form-card" onSubmit={handleSubmit} style={{ flex: 2, minWidth: 340, background: '#181818', borderRadius: 16, padding: 32, boxShadow: '0 4px 24px #0006', marginBottom: 0, display: 'flex', flexDirection: 'column', gap: 18, justifyContent: 'center' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: 16 }}>Get in Touch</h2>
+              
+              {/* Success/Error Messages */}
+              {submitMessage && (
+                <div style={{ background: '#1a3a1a', color: '#4ade80', padding: '12px 16px', borderRadius: 8, border: '1px solid #22c55e', fontSize: '0.95rem' }}>
+                  {submitMessage}
+                </div>
+              )}
+              {submitError && (
+                <div style={{ background: '#3a1a1a', color: '#f87171', padding: '12px 16px', borderRadius: 8, border: '1px solid #ef4444', fontSize: '0.95rem' }}>
+                  {submitError}
+                </div>
+              )}
+              
               <div style={{ display: 'flex', gap: 16 }}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <label htmlFor="name" style={{ fontWeight: 500, marginBottom: 2 }}>Name</label>
-                  <input id="name" name="name" type="text" placeholder="Your name" required style={{ background: '#111', color: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem' }} />
+                  <input 
+                    id="name" 
+                    name="name" 
+                    type="text" 
+                    placeholder="Your name" 
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required 
+                    style={{ background: '#111', color: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem' }} 
+                  />
                 </div>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <label htmlFor="email" style={{ fontWeight: 500, marginBottom: 2 }}>Email Address</label>
-                  <input id="email" name="email" type="email" placeholder="Your email" required style={{ background: '#111', color: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem' }} />
+                  <input 
+                    id="email" 
+                    name="email" 
+                    type="email" 
+                    placeholder="Your email" 
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required 
+                    style={{ background: '#111', color: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem' }} 
+                  />
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <label htmlFor="subject" style={{ fontWeight: 500, marginBottom: 2 }}>Subject</label>
-                <select id="subject" name="subject" required style={{ background: '#111', color: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem' }}>
+                <select 
+                  id="subject" 
+                  name="subject" 
+                  value={formData.subject}
+                  onChange={handleInputChange}
+                  required 
+                  style={{ background: '#111', color: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem' }}
+                >
                   <option value="">Select a subject...</option>
                   <option value="general">General Inquiry</option>
                   <option value="booking">Booking</option>
@@ -113,10 +210,50 @@ const ContactPage: React.FC = () => {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <label htmlFor="message" style={{ fontWeight: 500, marginBottom: 2 }}>Message</label>
-                <textarea id="message" name="message" placeholder="Your message..." required rows={5} style={{ background: '#111', color: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem', resize: 'vertical' }} />
+                <textarea 
+                  id="message" 
+                  name="message" 
+                  placeholder="Your message..." 
+                  value={formData.message}
+                  onChange={handleInputChange}
+                  required 
+                  rows={5} 
+                  style={{ background: '#111', color: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem', resize: 'vertical' }} 
+                />
               </div>
-              <button type="submit" style={{ background: '#ffd600', color: '#111', fontWeight: 600, border: 'none', borderRadius: 8, padding: '12px 0', fontSize: '1.1rem', marginTop: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 2px 8px #0003' }}>
-                Send Message <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                style={{ 
+                  background: isSubmitting ? '#666' : '#ffd600', 
+                  color: '#111', 
+                  fontWeight: 600, 
+                  border: 'none', 
+                  borderRadius: 8, 
+                  padding: '12px 0', 
+                  fontSize: '1.1rem', 
+                  marginTop: 8, 
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: 8, 
+                  boxShadow: '0 2px 8px #0003',
+                  opacity: isSubmitting ? 0.7 : 1
+                }}
+              >
+                {isSubmitting ? (
+                  <>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                      <circle cx="12" cy="12" r="10" strokeDasharray="31.416" strokeDashoffset="31.416" transform="rotate(-90 12 12)"/>
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    Send Message <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                  </>
+                )}
               </button>
             </form>
             {/* Info Card */}

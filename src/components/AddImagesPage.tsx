@@ -12,7 +12,7 @@ const AddImagesPage: React.FC = () => {
   const [serviceImages, setServiceImages] = useState<{ [key: string]: any[] }>({});
   const [descriptions, setDescriptions] = useState<{ [key: string]: string }>({});
 
-  const API_BASE_URL = 'https://workshop-backend-ox7a.vercel.app';
+  const API_BASE_URL = 'https://workshop-backend-six.vercel.app';
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +45,10 @@ const AddImagesPage: React.FC = () => {
     }
     formData.append('userId', 'admin');
     formData.append('serviceId', booking._id);
+    // Add customer email to associate images with the customer
+    if (booking.customer && booking.customer.email) {
+      formData.append('customerEmail', booking.customer.email);
+    }
 
     try {
       const res = await fetch(`${API_BASE_URL}/upload-service-image`, {
@@ -106,7 +110,19 @@ const AddImagesPage: React.FC = () => {
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 18px', cursor: 'pointer' }}
                         onClick={() => handleAccordion(idx)}
                       >
-                        <span style={{ color: '#ffd600', fontWeight: 600, fontSize: '1.13rem' }}>{booking.service?.label || 'Service'} ({booking.date})</span>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ color: '#ffd600', fontWeight: 600, fontSize: '1.13rem' }}>
+                            {booking.service?.label || 'Service'} ({booking.date})
+                          </span>
+                          {booking.customer && (
+                            <div style={{ color: '#bdbdbd', fontSize: '0.9rem', marginTop: 4 }}>
+                              Customer: {booking.customer.name} ({booking.customer.email})
+                            </div>
+                          )}
+                          <div style={{ color: '#fff', fontSize: '0.95rem', marginTop: 2 }}>
+                            {booking.car?.make} {booking.car?.model} {booking.car?.year} - {booking.car?.registration}
+                          </div>
+                        </div>
                         <span style={{ color: '#fff', fontSize: 22 }}>{expanded === idx ? '▲' : '▼'}</span>
                       </div>
                       {expanded === idx && (

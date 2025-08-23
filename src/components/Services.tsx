@@ -2,9 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import './Home.css';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import ClientBookingModal from './ClientBookingModal';
 gsap.registerPlugin(ScrollTrigger);
 
-const serviceData = [
+type ApiService = { _id: string; label: string; sub: string; price?: number; category?: string; description?: string };
+
+const fallbackServiceData = [
   {
     id: 1,
     category: 'Maintenance',
@@ -60,8 +63,49 @@ const categories = ['All', 'Maintenance', 'Repairs', 'Diagnostics', 'Inspection'
 const Services: React.FC = () => {
   const [selected, setSelected] = useState('All');
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [serviceData, setServiceData] = useState<typeof fallbackServiceData>(fallbackServiceData);
+  const [isClientBookingOpen, setIsClientBookingOpen] = useState(false);
+  const [selectedServiceForBooking, setSelectedServiceForBooking] = useState<typeof fallbackServiceData[0] | null>(null);
+
+  useEffect(() => {
+    fetch('https://workshop-backend-six.vercel.app/api/services')
+      .then(r => r.json())
+      .then((list: ApiService[]) => {
+        console.log('Fetched services:', list);
+        if (!Array.isArray(list) || list.length === 0) return;
+        const mapped = list.map((s, idx) => {
+          const durationRaw = s.sub?.split(' - ')[0] || '';
+          let duration = '';
+          if (durationRaw.includes('h')) {
+            const hours = parseFloat(durationRaw.replace('h', ''));
+            duration = hours === 1 ? '1 hour' : `${hours} hours`;
+          } else {
+            duration = durationRaw;
+          }
+          const category = s.category || (s.sub?.split(' - ')[1] || '').trim();
+          return {
+            id: idx + 1,
+            category: category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Maintenance',
+            title: s.label,
+            price: s.price ? `£${Number(s.price).toFixed(0)}` : '£0',
+            duration: duration,
+            details: s.description || '',
+          };
+        });
+        console.log('Mapped services:', mapped);
+        setServiceData(mapped as any);
+      })
+      .catch((error) => {
+        console.error('Error fetching services:', error);
+      });
+  }, []);
 
   const filtered = selected === 'All' ? serviceData : serviceData.filter(s => s.category === selected);
+
+  const handleClientBooking = (service: typeof fallbackServiceData[0]) => {
+    setSelectedServiceForBooking(service);
+    setIsClientBookingOpen(true);
+  };
 
   // Animation refs
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -107,9 +151,12 @@ const Services: React.FC = () => {
     }
   }, [filtered.length]);
 
+  // Check if selected category has any services
+  const hasServicesInCategory = selected === 'All' || filtered.length > 0;
+
   return (
-    <section className="services-section" id="services" ref={sectionRef}>
-      <div className="services-container">
+    <section  className="services-section" id="services" ref={sectionRef}>
+      <div  className="services-container">
         <h2 className="services-title" ref={titleRef}>
           Our Services
           <span className="services-title-underline"></span>
@@ -128,38 +175,63 @@ const Services: React.FC = () => {
             </button>
           ))}
         </div>
-        <div className="services-grid">
-          {filtered.map((service, i) => (
-            <div
-              key={service.id}
-              className={`service-card-modern${expanded === service.id ? ' expanded' : ''}`}
-              ref={el => { cardsRef.current[i] = el; }}
-            >
-              <div className="service-card-header">
-                <span className="service-card-category">{service.category}</span>
-                <span className="service-card-title">{service.title}</span>
-              </div>
-              <div className="service-card-info">
-                <span className="service-card-price">{service.price} <span className="service-card-from">from</span></span>
-                <span className="service-card-duration">{service.duration}</span>
-              </div>
-              <button
-                className="service-card-toggle"
-                onClick={() => setExpanded(expanded === service.id ? null : service.id)}
+        
+        {hasServicesInCategory ? (
+          <div className="services-grid">
+            {filtered.map((service, i) => (
+              <div
+                key={service.id}
+                className={`service-card-modern${expanded === service.id ? ' expanded' : ''}`}
+                ref={el => { cardsRef.current[i] = el; }}
               >
-                {expanded === service.id ? 'Show less' : 'Show details'}
-                <span className={`service-card-arrow${expanded === service.id ? ' up' : ''}`}>▼</span>
-              </button>
-              {expanded === service.id && (
-                <div className="service-card-details">
-                  <p>{service.details}</p>
-                  <button className="service-card-book-btn">Book Now →</button>
+                <div className="service-card-header">
+                  <span className="service-card-category">{service.category}</span>
+                  <span className="service-card-title">{service.title}</span>
                 </div>
-              )}
+                <div className="service-card-info">
+                  <span className="service-card-price">{service.price} <span className="service-card-from">from</span></span>
+                  <span className="service-card-duration">{service.duration}</span>
+                </div>
+                <button
+                  className="service-card-toggle"
+                  onClick={() => setExpanded(expanded === service.id ? null : service.id)}
+                >
+                  {expanded === service.id ? 'Show less ▲' : 'Show details ▼'}
+                </button>
+                {expanded === service.id && (
+                  <div className="service-card-details">
+                    <p>{service.details}</p>
+                    <button 
+                      className="service-card-book-btn" 
+                      onClick={() => handleClientBooking(service)}
+                    >
+                      Book Now →
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="coming-soon-container">
+            <div className="coming-soon-card">
+              <h3>Coming Soon</h3>
+              <p>We're working on adding {selected} services. Check back soon for updates!</p>
+              <div className="coming-soon-icon">🚗</div>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
+
+      {/* Client Booking Modal */}
+      <ClientBookingModal
+        isOpen={isClientBookingOpen}
+        onClose={() => {
+          setIsClientBookingOpen(false);
+          setSelectedServiceForBooking(null);
+        }}
+        selectedService={selectedServiceForBooking}
+      />
     </section>
   );
 };

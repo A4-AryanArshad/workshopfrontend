@@ -24,7 +24,7 @@ const ResetPasswordPage: React.FC = () => {
       return;
     }
     try {
-      const res = await fetch('http://localhost:5001/api/reset-password', {
+      const res = await fetch('https://workshop-backend-six.vercel.app/api/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password })

@@ -64,6 +64,7 @@ const Navbar: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
+    localStorage.removeItem('userEmail'); // Clear stored email on logout
     setRole(null);
     navigate('/login');
   };
@@ -89,6 +90,7 @@ const Navbar: React.FC = () => {
         <div className={`new-navbar-menu${menuOpen ? ' open' : ''}`}>
           <ul className="new-nav-menu">
             <li><Link to="/dashboard" onClick={() => setMenuOpen(false)}>Admin Dashboard</Link></li>
+            <li><Link to="/dashboard/admin-messages" onClick={() => setMenuOpen(false)}>Messages</Link></li>
             <li><Link to="/dashboard/add-images" onClick={() => setMenuOpen(false)}>AddImages</Link></li>
             <li><button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>Logout</button></li>
           </ul>
@@ -118,10 +120,9 @@ const Navbar: React.FC = () => {
         <div className={`new-navbar-menu${menuOpen ? ' open' : ''}`}>
           <ul className="new-nav-menu">
             <li><Link to="/" onClick={() => setMenuOpen(false)}>Home</Link></li>
-            <li><Link to="/our-services" onClick={() => setMenuOpen(false)}>Services</Link></li>
             <li><Link to="/about" onClick={() => setMenuOpen(false)}>About</Link></li>
+            <li><Link to="/user-dashboard" onClick={() => setMenuOpen(false)}>Services</Link></li>
             <li><Link to="/dashboard/past-services" onClick={() => setMenuOpen(false)}>Past Services</Link></li>
-            <li><Link to="/dashboard/upcoming" onClick={() => setMenuOpen(false)}>Upcoming Appointments</Link></li>
             <li><Link to="/dashboard/messages" onClick={() => setMenuOpen(false)}>Messages</Link></li>
             <li><Link to="/contact" onClick={() => setMenuOpen(false)}>Contact</Link></li>
             <li><button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>Logout</button></li>
@@ -148,10 +149,9 @@ const Navbar: React.FC = () => {
           <span></span>
         </button>
       )}
-      <div className={`new-navbar-menu${menuOpen ? ' open' : ''}`}>
+              <div className={`new-navbar-menu${menuOpen ? ' open' : ''}`}>
         <ul id="links1" className="new-nav-menu">
           <li><Link to="/" onClick={() => setMenuOpen(false)}>Home</Link></li>
-          <li><Link to="/our-services" onClick={() => setMenuOpen(false)}>Services</Link></li>
           <li><Link to="/about" onClick={() => setMenuOpen(false)}>About</Link></li>
           <li><Link to="/contact" onClick={() => setMenuOpen(false)}>Contact</Link></li>
         </ul>
@@ -160,7 +160,7 @@ const Navbar: React.FC = () => {
             <Link to="/login" style={{ color: 'inherit', textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>Log In</Link>
           </button>
           <button className="new-book-btn">
-            <Link to="/signup" style={{ color: 'inherit', textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>Book Now</Link>
+            <Link to="/our-services" style={{ color: 'inherit', textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>Book Now</Link>
           </button>
         </div>
       </div>
