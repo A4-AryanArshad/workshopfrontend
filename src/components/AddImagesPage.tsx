@@ -50,7 +50,7 @@ const AddImagesPage: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/upload-service-image`, {
+      const res = await fetch(`${API_BASE_URL}/upload-service-image`, {
         method: 'POST',
         body: formData,
       });
