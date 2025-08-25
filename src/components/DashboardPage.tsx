@@ -4,6 +4,7 @@ import './Home.css';
 import Footer from './Footer';
 import dayjs from 'dayjs';
 import CircularLoader from './CircularLoader';
+import { API_BASE_URL } from '../config';
 
 const PlusIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 12, verticalAlign: 'middle', display: 'inline-block' }}>
@@ -81,7 +82,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
 
   useEffect(() => {
     setIsAdmin(localStorage.getItem('role') === 'admin');
-    fetch('https://workshop-backend-six.vercel.app/api/services')
+    fetch(`${API_BASE_URL}/api/services`)
       .then(r => r.json())
       .then((list: ServiceItem[]) => {
         if (Array.isArray(list)) {
@@ -99,7 +100,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
 
   const refreshServices = () => {
     console.log('🔧 Refreshing services from backend...');
-    fetch('https://workshop-backend-six.vercel.app/api/services')
+    fetch(`${API_BASE_URL}/api/services`)
       .then(r => r.json())
       .then((list: ServiceItem[]) => {
         if (Array.isArray(list)) {
@@ -241,7 +242,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       for (const part of parts) {
         try {
           console.log(`🔍 SCHEDULED BOOKING - Deducting part ${part.partNumber} (${part.name}) - Quantity: ${part.qty}`);
-          const deductResponse = await fetch(`https://workshop-backend-six.vercel.app/api/parts/${part.partNumber}/deduct`, {
+          const deductResponse = await fetch(`${API_BASE_URL}/api/parts/${part.partNumber}/deduct`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ quantity: part.qty || 1 })
@@ -334,7 +335,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     setLookupError('');
     setLookupResult(null);
     try {
-      const response = await fetch('https://workshop-backend-six.vercel.app/api/dvla-lookup', {
+      const response = await fetch(`${API_BASE_URL}/api/dvla-lookup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -353,33 +354,43 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
 
   // Fetch all bookings on mount
   useEffect(() => {
+    console.log('🔍 DashboardPage useEffect - fetching bookings from:', `${API_BASE_URL}/api/bookings`);
     setBookingsLoading(true);
-    fetch('https://workshop-backend-six.vercel.app/api/bookings')
-      .then(res => res.json())
+    fetch(`${API_BASE_URL}/api/bookings`)
+      .then(res => {
+        console.log('📅 Response status:', res.status);
+        console.log('📅 Response ok:', res.ok);
+        return res.json();
+      })
       .then(data => {
-        console.log('📅 Fetched bookings:', data);
+        console.log('📅 Fetched bookings data:', data);
         console.log('📅 Current dashboard date:', dashboardDate.format('YYYY-MM-DD'));
         if (data.success && Array.isArray(data.bookings)) {
+          console.log('📅 Data has success and bookings array:', data.bookings.length);
           setBookings(data.bookings);
         } else if (Array.isArray(data)) {
+          console.log('📅 Data is array, setting bookings:', data.length);
           setBookings(data);
         } else {
-          console.error('Bookings API returned non-array:', data);
+          console.error('❌ Bookings API returned unexpected format:', data);
           setBookings([]);
         }
       })
       .catch((error) => {
-        console.error('Failed to fetch bookings:', error);
+        console.error('❌ Failed to fetch bookings:', error);
         setBookings([]);
       })
-      .finally(() => setBookingsLoading(false));
+      .finally(() => {
+        console.log('📅 Setting bookingsLoading to false');
+        setBookingsLoading(false);
+      });
   }, []);
 
-  // Fetch unread messages count
-  useEffect(() => {
-    const fetchUnreadMessages = async () => {
-      try {
-        const response = await fetch('https://workshop-backend-six.vercel.app/api/admin/unread-messages');
+            // Fetch unread messages count
+          useEffect(() => {
+            const fetchUnreadMessages = async () => {
+              try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/unread-messages`);
         const data = await response.json();
         if (data.success) {
           setUnreadMessages(data.count);
@@ -500,7 +511,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       category,
     };
     try {
-      await fetch('https://workshop-backend-six.vercel.app/api/bookings', {
+      await fetch(`${API_BASE_URL}/api/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bookingData),
@@ -512,7 +523,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       for (const part of parts) {
         try {
           console.log(`🔍 MANUAL BOOKING - Deducting part ${part.partNumber} (${part.name}) - Quantity: ${part.qty}`);
-          const deductResponse = await fetch(`https://workshop-backend-six.vercel.app/api/parts/${part.partNumber}/deduct`, {
+          const deductResponse = await fetch(`${API_BASE_URL}/api/parts/${part.partNumber}/deduct`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ quantity: part.qty || 1 })
@@ -530,7 +541,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       }
       
       // Refresh bookings
-      const res = await fetch('https://workshop-backend-six.vercel.app/api/bookings');
+      const res = await fetch(`${API_BASE_URL}/api/bookings`);
       const bookingsData = await res.json();
       if (Array.isArray(bookingsData)) {
         setBookings(bookingsData);
@@ -706,7 +717,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       category,
     };
     try {
-      await fetch('https://workshop-backend-six.vercel.app/api/bookings', {
+      await fetch(`${API_BASE_URL}/api/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bookingData),
@@ -718,7 +729,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       for (const part of lookupParts) {
         try {
           console.log(`🔍 LOOKUP BOOKING - Deducting part ${part.partNumber} (${part.name}) - Quantity: ${part.qty}`);
-          const deductResponse = await fetch(`https://workshop-backend-six.vercel.app/api/parts/${part.partNumber}/deduct`, {
+          const deductResponse = await fetch(`${API_BASE_URL}/api/parts/${part.partNumber}/deduct`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ quantity: part.qty || 1 })
@@ -736,7 +747,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       }
       
       // Refresh bookings
-      const res = await fetch('https://workshop-backend-six.vercel.app/api/bookings');
+      const res = await fetch(`${API_BASE_URL}/api/bookings`);
       const bookingsData = await res.json();
       if (Array.isArray(bookingsData)) {
         setBookings(bookingsData);
@@ -763,7 +774,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   // Fetch all parts when the Parts Management modal opens
   useEffect(() => {
     if (showPartsModal) {
-      fetch('https://workshop-backend-six.vercel.app/api/parts')
+      fetch(`${API_BASE_URL}/api/parts`)
         .then(res => res.json())
         .then((data) => {
           if (Array.isArray(data)) {
@@ -784,8 +795,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
 
   // Delete part from database and refresh list
   const handleDeletePartFromDB = async (id: string) => {
-    await fetch(`https://workshop-backend-six.vercel.app/api/parts/${id}`, { method: 'DELETE' });
-    fetch('https://workshop-backend-six.vercel.app/api/parts')
+    await fetch(`${API_BASE_URL}/api/parts/${id}`, { method: 'DELETE' });
+    fetch(`${API_BASE_URL}/api/parts`)
       .then(res => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -836,7 +847,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
         }
       } else {
         // It's a real part from the database, update it
-        const response = await fetch(`https://workshop-backend-six.vercel.app/api/parts/${editPartId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/parts/${editPartId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(editPartDraft),
@@ -844,7 +855,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
         
         if (response.ok) {
           // Refresh parts list
-          fetch('https://workshop-backend-six.vercel.app/api/parts')
+          fetch(`${API_BASE_URL}/api/parts`)
             .then(res => res.json())
             .then((data) => {
               if (Array.isArray(data)) {
@@ -877,7 +888,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   const handleDeleteService = async (service: ServiceItem, index: number) => {
     if (!isAdmin) return;
     if (service._id) {
-      await fetch(`https://workshop-backend-six.vercel.app/api/services/${service._id}`, { method: 'DELETE' });
+              await fetch(`${API_BASE_URL}/api/services/${service._id}`, { method: 'DELETE' });
     }
     setServiceOptions(prev => prev.filter((_, i) => i !== index));
     if (selectedService >= serviceOptions.length - 1) setSelectedService(0);
@@ -905,12 +916,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     };
     let saved: ServiceItem | null = null;
     if (editServiceDraft._id) {
-      const res = await fetch(`https://workshop-backend-six.vercel.app/api/services/${editServiceDraft._id}`, {
+              const res = await fetch(`${API_BASE_URL}/api/services/${editServiceDraft._id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       saved = await res.json();
     } else {
-      const res = await fetch('https://workshop-backend-six.vercel.app/api/services', {
+              const res = await fetch(`${API_BASE_URL}/api/services`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       saved = await res.json();
@@ -929,13 +940,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   const handleCreateService = async () => {
     if (newService.label && newService.sub) {
       try {
-        await fetch('https://workshop-backend-six.vercel.app/api/services', {
+        await fetch(`${API_BASE_URL}/api/services`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newService),
         });
         // Refresh services
-        fetch('https://workshop-backend-six.vercel.app/api/services')
+        fetch(`${API_BASE_URL}/api/services`)
           .then(r => r.json())
           .then((list: ServiceItem[]) => setServiceOptions(list))
           .catch(() => setServiceOptions([]));
@@ -961,7 +972,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
           labourCost: parseFloat(lookupNewService.labourCost) || 0
         };
         
-        await fetch('https://workshop-backend-six.vercel.app/api/services', {
+        await fetch(`${API_BASE_URL}/api/services`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(serviceData),
@@ -984,9 +995,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
 
   // User Service Tracking Functions
   const fetchUserServices = async (searchParams?: { email?: string; registration?: string }) => {
+    console.log('🔍 fetchUserServices called with params:', searchParams);
     setUserServicesLoading(true);
     try {
-      let url = 'https://workshop-backend-six.vercel.app/api/user-services';
+      let url = `${API_BASE_URL}/api/user-services`;
       if (searchParams) {
         const params = new URLSearchParams();
         if (searchParams.email) params.append('email', searchParams.email);
@@ -994,22 +1006,30 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
         if (params.toString()) url += `?${params.toString()}`;
       }
       
+      console.log('🔍 Fetching user services from URL:', url);
       const response = await fetch(url);
+      console.log('🔍 User services response status:', response.status);
+      console.log('🔍 User services response ok:', response.ok);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 User services data received:', data);
         if (Array.isArray(data)) {
+          console.log('🔍 Setting user services array:', data.length);
           setUserServices(data);
         } else {
-          console.error('User Services API returned non-array:', data);
+          console.error('❌ User Services API returned non-array:', data);
           setUserServices([]);
         }
       } else {
+        console.error('❌ User services response not ok:', response.status);
         setUserServices([]);
       }
     } catch (error) {
-      console.error('Error fetching user services:', error);
+      console.error('❌ Error fetching user services:', error);
       setUserServices([]);
     } finally {
+      console.log('🔍 Setting userServicesLoading to false');
       setUserServicesLoading(false);
     }
   };
@@ -1017,7 +1037,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   // Auto-fill part details from database
   const autoFillPartDetails = async (partNumber: string, name: string) => {
     try {
-      const response = await fetch('https://workshop-backend-six.vercel.app/api/parts');
+      const response = await fetch(`${API_BASE_URL}/api/parts`);
       if (response.ok) {
         const parts = await response.json();
         // Case-insensitive search by part number or name

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Footer from './Footer';
 import Navbar from './Navbar';
+import { API_BASE_URL } from '../config';
 
 const iconColor = '#FFD600';
 
@@ -49,7 +50,7 @@ const ContactPage: React.FC = () => {
     setSubmitError('');
 
     try {
-      const response = await fetch('https://workshop-backend-six.vercel.app/api/contact', {
+      const response = await fetch(`${API_BASE_URL}/api/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

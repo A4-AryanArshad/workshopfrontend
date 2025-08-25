@@ -1,12 +1,10 @@
-// Configuration file for API endpoints
-export const API_BASE_URL = process.env.NODE_ENV === 'development' 
-  ? 'https://workshop-backend-six.vercel.app'  // Temporarily use production backend for testing
-  : 'https://workshop-backend-six.vercel.app';
+// API Configuration
+export const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://workshop-backend-six.vercel.app'
+  : 'https://workshop-backend-six.vercel.app'; // Use deployed backend for both production and development
 
-// Alternative: Force local development for testing
-// export const API_BASE_URL = 'http://localhost:5001';
+// Environment Configuration
+export const NODE_ENV = process.env.NODE_ENV || 'development';
 
-export const config = {
-  apiBaseUrl: API_BASE_URL,
-  environment: process.env.NODE_ENV || 'development'
-}; 
+// Admin Configuration
+export const ADMIN_EMAIL = process.env.REACT_APP_ADMIN_EMAIL || 'aryanarshad5413@gmail.com'; 

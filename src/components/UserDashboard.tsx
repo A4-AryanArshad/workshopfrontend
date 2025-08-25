@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import CarDetailsForm from './CarDetailsForm';
+import { API_BASE_URL } from '../config';
 
 interface Service {
   _id: string;
@@ -11,6 +12,8 @@ interface Service {
   price: number;
   category: string;
   description?: string;
+  labourHours?: number;
+  labourCost?: number;
 }
 
 interface CartItem {
@@ -36,9 +39,24 @@ const UserDashboard: React.FC = () => {
         setLoading(true);
         
         // Fetch services
-        const servicesResponse = await fetch('https://workshop-backend-six.vercel.app/api/services');
+        const servicesResponse = await fetch(`${API_BASE_URL}/api/services`);
         if (servicesResponse.ok) {
           const servicesData = await servicesResponse.json();
+          console.log('🔧 Services data received:', servicesData);
+          console.log('🔧 Looking for "plug" service:', servicesData.find((s: any) => s.label === 'plug'));
+          
+          // Debug: Check all services for labour data
+          servicesData.forEach((service: any, index: number) => {
+            if (service.label === 'plug') {
+              console.log('🔧 PLUG SERVICE DETAILS:', {
+                label: service.label,
+                price: service.price,
+                labourHours: service.labourHours,
+                labourCost: service.labourCost,
+                total: service.price + (service.labourHours * (service.labourCost || 10))
+              });
+            }
+          });
           setServices(servicesData);
         }
       } catch (err) {
@@ -102,7 +120,12 @@ const UserDashboard: React.FC = () => {
   };
 
   const getCartTotal = () => {
-    return cart.reduce((total, item) => total + (item.service.price * item.quantity), 0);
+    return cart.reduce((total, item) => {
+      const servicePrice = item.service.price;
+      const labourCost = item.service.labourHours ? (item.service.labourHours * (item.service.labourCost || 10)) : 0;
+      const totalItemPrice = servicePrice + labourCost;
+      return total + (totalItemPrice * item.quantity);
+    }, 0);
   };
 
   const getCartItemCount = () => {
@@ -126,7 +149,7 @@ const UserDashboard: React.FC = () => {
       const userEmail = localStorage.getItem('userEmail');
       const userName = localStorage.getItem('userName') || 'Customer';
 
-      const response = await fetch('https://workshop-backend-six.vercel.app/api/create-checkout-session', {
+      const response = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -265,6 +288,14 @@ const UserDashboard: React.FC = () => {
   return (
     <>
       <Navbar />
+      <style>
+        {`
+          @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+          }
+        `}
+      </style>
       <div id="use1" style={{ background: '#111', minHeight: '100vh', padding: '48px 24px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           {/* Header */}
@@ -322,7 +353,7 @@ const UserDashboard: React.FC = () => {
               border: '1px solid #232323'
             }}>
               <h2 style={{ color: '#ffd600', fontSize: '1.5rem', fontWeight: '600', marginBottom: '20px' }}>
-                Shopping Cart ({cart.length} items)
+                Shopping Cart ({getCartItemCount()} items)
               </h2>
               
               {cart.length === 0 ? (
@@ -346,8 +377,27 @@ const UserDashboard: React.FC = () => {
                           {item.service.label}
                         </h3>
                         <p style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>
-                          {item.service.sub} - £{item.service.price}
+                          {item.service.sub}
                         </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                          <span style={{ color: '#ffd700', fontSize: '0.85rem' }}>
+                            💰 Service Charge: £{item.service.price}
+                          </span>
+                          {item.service.labourHours && item.service.labourHours > 0 ? (
+                            <span style={{ color: '#ffd700', fontSize: '0.85rem' }}>
+                              🔧 Labour Charge: £{(item.service.labourHours * (item.service.labourCost || 10)).toFixed(2)}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#4CAF50', fontSize: '0.85rem' }}>
+                              ✅ Labour Included
+                            </span>
+                          )}
+                        </div>
+                        {item.service.labourHours && item.service.labourHours > 0 && (
+                          <p style={{ color: '#ffd700', fontSize: '0.85rem', fontWeight: '600', marginTop: '4px' }}>
+                            Total: £{(item.service.price + (item.service.labourHours * (item.service.labourCost || 10))).toFixed(2)}
+                          </p>
+                        )}
                       </div>
                       
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -510,63 +560,309 @@ const UserDashboard: React.FC = () => {
                 gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', 
                 gap: '24px' 
               }}>
-                {filteredServices.map((service) => (
+                                {filteredServices.map((service) => (
                   <div key={service._id} style={{
-                    background: '#181818',
-                    borderRadius: '16px',
-                    padding: '24px',
-                    boxShadow: '0 4px 24px #0006',
-                    border: '1px solid #232323'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{ color: '#fff', fontSize: '1.3rem', fontWeight: '600', marginBottom: '8px' }}>
+                    background: 'linear-gradient(145deg, #1a1a1a, #232323)',
+                    borderRadius: '20px',
+                    padding: '28px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(255, 215, 0, 0.1)',
+                    border: '2px solid #333',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(255, 215, 0, 0.2)';
+                    e.currentTarget.style.borderColor = '#ffd700';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(255, 215, 0, 0.1)';
+                    e.currentTarget.style.borderColor = '#333';
+                  }}
+                  >
+                    {/* Service Header with Enhanced Styling */}
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'flex-start', 
+                      marginBottom: '24px',
+                      position: 'relative'
+                    }}>
+                      <div style={{ flex: 1, paddingRight: '20px' }}>
+                        <h3 style={{ 
+                          color: '#fff', 
+                          fontSize: '1.5rem', 
+                          fontWeight: '700', 
+                          marginBottom: '12px',
+                          textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'
+                        }}>
                           {service.label}
                         </h3>
-                        <p style={{ color: '#bdbdbd', fontSize: '1rem', marginBottom: '12px' }}>
+                        <div style={{
+                          background: 'linear-gradient(135deg, #ffd700, #ffed4e)',
+                          color: '#000',
+                          padding: '6px 12px',
+                          borderRadius: '20px',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          display: 'inline-block',
+                          marginBottom: '12px',
+                          boxShadow: '0 2px 8px rgba(255, 215, 0, 0.3)'
+                        }}>
                           {service.sub}
-                        </p>
+                        </div>
                         {service.description && (
-                          <p style={{ color: '#888', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                          <p style={{ 
+                            color: '#bdbdbd', 
+                            fontSize: '0.95rem', 
+                            lineHeight: '1.6',
+                            marginBottom: '0',
+                            fontStyle: 'italic'
+                          }}>
                             {service.description}
                           </p>
                         )}
                       </div>
-                      <div style={{ textAlign: 'right', minWidth: '80px' }}>
+                      
+                      {/* Enhanced Price Display */}
+                      <div style={{ 
+                        textAlign: 'right', 
+                        minWidth: '140px',
+                        position: 'relative'
+                      }}>
+                        {/* Main Total Price */}
                         <div style={{ 
-                          color: '#ffd600', 
-                          fontSize: '1.5rem', 
-                          fontWeight: '700' 
+                          background: 'linear-gradient(135deg, #ffd700, #ffed4e)',
+                          color: '#000',
+                          padding: '16px 20px',
+                          borderRadius: '16px',
+                          fontSize: '1.6rem',
+                          fontWeight: '800',
+                          marginBottom: '12px',
+                          boxShadow: '0 4px 20px rgba(255, 215, 0, 0.4)',
+                          textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
                         }}>
-                          £{service.price}
+                          £{service.labourHours ? (service.price + (service.labourHours * (service.labourCost || 10))).toFixed(2) : service.price}
                         </div>
+                        
+                        {/* Category Badge */}
                         <div style={{
                           background: getCategoryColor(service.category),
                           color: '#fff',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
+                          padding: '8px 16px',
+                          borderRadius: '20px',
                           fontSize: '0.8rem',
-                          fontWeight: '600',
+                          fontWeight: '700',
                           display: 'inline-block',
-                          marginTop: '8px'
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
                         }}>
                           {service.category}
                         </div>
                       </div>
                     </div>
                     
+                    {/* Enhanced Pricing Breakdown */}
+                    <div style={{
+                      background: 'linear-gradient(145deg, #2a2a2a, #1f1f1f)',
+                      borderRadius: '16px',
+                      padding: '24px',
+                      marginBottom: '20px',
+                      border: '2px solid #444',
+                      position: 'relative'
+                    }}>
+                      <div style={{ 
+                        color: '#ffd700', 
+                        fontSize: '1.2rem', 
+                        fontWeight: '700', 
+                        marginBottom: '20px',
+                        textAlign: 'center',
+                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'
+                      }}>
+                        💰 Pricing Breakdown
+                      </div>
+                      
+                      {/* Service and Labour Cards */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '16px',
+                        marginBottom: '20px'
+                      }}>
+                        <div style={{
+                          background: 'linear-gradient(145deg, #1a1a1a, #232323)',
+                          padding: '20px',
+                          borderRadius: '12px',
+                          textAlign: 'center',
+                          border: '2px solid #444',
+                          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+                        }}>
+                          <div style={{ 
+                            color: '#ffd700', 
+                            fontSize: '1rem', 
+                            marginBottom: '8px',
+                            fontWeight: '600'
+                          }}>
+                            🔧 Service Fee
+                          </div>
+                          <div style={{ 
+                            color: '#fff', 
+                            fontWeight: '700', 
+                            fontSize: '1.3rem',
+                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'
+                          }}>
+                            £{service.price}
+                          </div>
+                        </div>
+                        
+                        <div style={{
+                          background: 'linear-gradient(145deg, #1a1a1a, #232323)',
+                          padding: '20px',
+                          borderRadius: '12px',
+                          textAlign: 'center',
+                          border: '2px solid #444',
+                          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+                        }}>
+                          <div style={{ 
+                            color: '#ffd700', 
+                            fontSize: '1rem', 
+                            marginBottom: '8px',
+                            fontWeight: '600'
+                          }}>
+                            ⏱️ Labour Charges
+                          </div>
+                          <div style={{ 
+                            color: '#fff', 
+                            fontWeight: '700', 
+                            fontSize: '1.3rem',
+                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'
+                          }}>
+                            {service.labourHours ? `£${(service.labourHours * (service.labourCost || 10)).toFixed(2)}` : 'Included'}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Enhanced Total Amount Display */}
+                      <div style={{
+                        background: 'linear-gradient(135deg, #ffd700, #ffed4e)',
+                        color: '#000',
+                        padding: '20px',
+                        borderRadius: '16px',
+                        textAlign: 'center',
+                        fontWeight: '800',
+                        fontSize: '1.4rem',
+                        boxShadow: '0 6px 24px rgba(255, 215, 0, 0.4)',
+                        textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          position: 'absolute',
+                          top: '-50%',
+                          left: '-50%',
+                          width: '200%',
+                          height: '200%',
+                          background: 'linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent)',
+                          animation: 'shine 3s infinite'
+                        }} />
+                        💰 TOTAL AMOUNT: £{service.labourHours ? (service.price + (service.labourHours * (service.labourCost || 10))).toFixed(2) : service.price}
+                      </div>
+                      
+                      {/* Enhanced Breakdown Summary */}
+                      {service.labourHours && (
+                        <div style={{
+                          background: 'linear-gradient(145deg, #1a1a1a, #232323)',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          marginTop: '16px',
+                          textAlign: 'center',
+                          border: '2px solid #444'
+                        }}>
+                          <div style={{ 
+                            color: '#ffd700', 
+                            fontSize: '1rem', 
+                            fontWeight: '700', 
+                            marginBottom: '12px',
+                            textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'
+                          }}>
+                            📋 Cost Breakdown
+                          </div>
+                          <div style={{ 
+                            color: '#bdbdbd', 
+                            fontSize: '0.9rem', 
+                            lineHeight: '1.6',
+                            background: '#1a1a1a',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            border: '1px solid #333'
+                          }}>
+                            <strong>Service Fee:</strong> £{service.price}<br/>
+                            <strong>Labour:</strong> {service.labourHours}h × £{service.labourCost || 10}/h = £{(service.labourHours * (service.labourCost || 10)).toFixed(2)}<br/>
+                            <span style={{ 
+                              color: '#ffd700', 
+                              fontWeight: '700',
+                              fontSize: '1.1rem',
+                              display: 'block',
+                              marginTop: '8px',
+                              padding: '8px',
+                              background: '#000',
+                              borderRadius: '6px'
+                            }}>
+                              🎯 Total: £{(service.price + (service.labourHours * (service.labourCost || 10))).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Enhanced Labour Rate Note */}
+                      {service.labourHours && (
+                        <div style={{
+                          color: '#bdbdbd',
+                          fontSize: '0.85rem',
+                          textAlign: 'center',
+                          marginTop: '16px',
+                          fontStyle: 'italic',
+                          padding: '12px',
+                          background: '#1a1a1a',
+                          borderRadius: '8px',
+                          border: '1px solid #333'
+                        }}>
+                          ⚡ Labour charges are calculated at £{service.labourCost || 10}/hour
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Enhanced Add to Cart Button */}
                     <button
                       onClick={() => addToCart(service)}
                       style={{
-                        background: '#ffd600',
-                        color: '#111',
+                        background: 'linear-gradient(135deg, #ffd700, #ffed4e)',
+                        color: '#000',
                         border: 'none',
-                        borderRadius: '8px',
-                        padding: '12px 24px',
+                        borderRadius: '12px',
+                        padding: '16px 28px',
                         cursor: 'pointer',
-                        fontWeight: '600',
+                        fontWeight: '700',
                         width: '100%',
-                        fontSize: '1rem'
+                        fontSize: '1.1rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        boxShadow: '0 4px 20px rgba(255, 215, 0, 0.4)',
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 6px 24px rgba(255, 215, 0, 0.6)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 20px rgba(255, 215, 0, 0.4)';
                       }}
                     >
                       🛒 Add to Cart

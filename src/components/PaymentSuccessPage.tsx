@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import { API_BASE_URL } from '../config';
 
 const PaymentSuccessPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [bookingCreated, setBookingCreated] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -15,65 +15,76 @@ const PaymentSuccessPage: React.FC = () => {
   const processedSessionsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    console.log('🔍 PaymentSuccessPage useEffect triggered');
-    
     const sessionIdParam = searchParams.get('session_id');
-    console.log('🔍 Session ID param:', sessionIdParam);
+    setSessionId(sessionIdParam);
     
-    if (sessionIdParam) {
-      console.log('🎯 Session ID found, creating booking directly...');
-      createDirectBooking(sessionIdParam);
-    } else {
-      console.log('⚠️ No session ID found in URL params');
-    }
-  }, [searchParams]);
-
-  const createDirectBooking = async (sessionId: string) => {
-    console.log('🚀 createDirectBooking called with sessionId:', sessionId);
-    
-    // FRONTEND-SIDE DUPLICATE PREVENTION: Check if we've already processed this session
-    if (processedSessionsRef.current.has(sessionId)) {
-      console.log('🚫 Session already processed, skipping duplicate call');
+    // CRITICAL: Prevent multiple booking attempts
+    if (hasAttemptedBooking || bookingCreated) {
       return;
     }
     
-    // FRONTEND-SIDE DUPLICATE PREVENTION: Check if we're already processing
+    if (sessionIdParam) {
+      setHasAttemptedBooking(true); // Prevent multiple attempts
+      createDirectBooking(sessionIdParam);
+    }
+  }, [searchParams, hasAttemptedBooking, bookingCreated]);
+
+  const createDirectBooking = async (sessionId: string) => {
+    // ENHANCED FRONTEND-SIDE DUPLICATE PREVENTION
+    if (processedSessionsRef.current.has(sessionId)) {
+      setBookingCreated(true); // Mark as created since it was already processed
+      return;
+    }
+    
     if (isCreating) {
-      console.log('🚫 Already creating booking, skipping duplicate call');
+      return;
+    }
+    
+    if (hasAttemptedBooking) {
       return;
     }
     
     // Mark this session as being processed immediately
     processedSessionsRef.current.add(sessionId);
     setIsCreating(true);
+    setHasAttemptedBooking(true);
     setBookingError('');
+    
+    // CRITICAL: Prevent any error state if booking is already successful
+    if (bookingCreated) {
+      setIsCreating(false);
+      return;
+    }
     
     try {
       // Get pending booking data from localStorage
       const pendingBookingData = localStorage.getItem('pendingBooking');
       
       if (!pendingBookingData) {
-        console.error('❌ No pending booking data found in localStorage');
         setBookingError('No booking data found. Please try again.');
         setIsCreating(false);
         return;
       }
       
       const bookingData = JSON.parse(pendingBookingData);
-      console.log('📦 Retrieved booking data:', bookingData);
       
-      // Get the first service from cart
-      const firstService = bookingData.cart[0];
+      // Get ALL services from cart and calculate total
+      const allServices = bookingData.cart;
+      const totalPrice = allServices.reduce((sum: number, item: any) => {
+        const servicePrice = item.service.price;
+        const labourCost = item.service.labourHours ? (item.service.labourHours * (item.service.labourCost || 10)) : 0;
+        return sum + servicePrice + labourCost;
+      }, 0);
+      
       const serviceDetails = {
-        label: firstService.service.label,
-        description: firstService.service.sub,
-        price: firstService.service.price * firstService.quantity
+        label: allServices.map((item: any) => item.service.label).join(', '),
+        description: `Multiple services: ${allServices.map((item: any) => `${item.service.label} (x${item.quantity})`).join(', ')}`,
+        price: totalPrice,
+        services: allServices // Send the entire cart
       };
       
-      console.log('📦 Service details:', serviceDetails);
-      
       // Call the direct booking endpoint
-      const response = await fetch('https://workshop-backend-six.vercel.app/api/create-booking-direct', {
+      const response = await fetch(`${API_BASE_URL}/api/create-booking-direct`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,10 +98,11 @@ const PaymentSuccessPage: React.FC = () => {
         }),
       });
       
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Direct booking created successfully:', result);
-        setBookingCreated(true);
+              if (response.ok) {
+          const result = await response.json();
+                  // Set both states atomically to prevent race conditions
+          setBookingCreated(true);
+          setBookingError(''); // Clear any previous errors
         
         // Clean up localStorage
         localStorage.removeItem('pendingBooking');
@@ -99,39 +111,41 @@ const PaymentSuccessPage: React.FC = () => {
       } else {
         const errorData = await response.json();
         console.error('❌ Failed to create direct booking:', errorData);
-        setBookingError('Failed to create booking: ' + (errorData.error || 'Unknown error'));
+        console.error('❌ HTTP Status:', response.status);
+        console.error('❌ Response Headers:', Object.fromEntries(response.headers.entries()));
+        console.error('❌ Full Error Response:', errorData);
+        
+                         // Only set error if booking wasn't already successful
+                 if (!bookingCreated) {
+                   setBookingError('Failed to create booking: ' + (errorData.error || errorData.message || 'Unknown error'));
+                 }
       }
-    } catch (error) {
-      console.error('❌ Error creating direct booking:', error);
-      setBookingError('Network error while creating booking');
-    } finally {
+          } catch (error) {
+        console.error('❌ Error creating direct booking:', error);
+                       // Only set error if booking wasn't already successful
+               if (!bookingCreated) {
+                 setBookingError('Network error while creating booking');
+               }
+      } finally {
       setIsCreating(false);
     }
   };
 
   const createBookingFromSession = async (sessionId: string) => {
-    console.log('🚀 createBookingFromSession called with sessionId:', sessionId);
     
     // Check if we've already processed this session (using ref for immediate protection)
     if (processedSessionsRef.current.has(sessionId)) {
-      console.log('⚠️ Session already processed, skipping...');
       setBookingCreated(true);
       return;
     }
     
-    console.log('✅ Proceeding with booking creation...');
     setIsCreating(true);
     try {
-      console.log('🎯 Creating booking from session:', sessionId);
-      
       // Get user info from localStorage
       const userEmail = localStorage.getItem('userEmail');
       const userName = localStorage.getItem('userName') || 'Customer';
       
-      console.log('👤 User info:', { email: userEmail, name: userName });
-      
       if (!userEmail) {
-        console.error('❌ No user email found');
         setBookingError('User information not found. Please contact support.');
         return;
       }
@@ -152,7 +166,6 @@ const PaymentSuccessPage: React.FC = () => {
       
       if (storedCarDetails) {
         carDetails = JSON.parse(storedCarDetails);
-        console.log('🚗 Retrieved car details:', carDetails);
       }
       
       if (storedCart) {
@@ -165,17 +178,15 @@ const PaymentSuccessPage: React.FC = () => {
             description: firstService.service.sub,
             price: firstService.service.price * firstService.quantity
           };
-          console.log('📦 Retrieved service details:', serviceDetails);
         }
       }
     } catch (error) {
-      console.error('⚠️ Could not retrieve stored data:', error);
+      // Handle error silently
     }
     
     // Use the new session-based endpoint with actual data
-    console.log('📞 Calling session-based booking endpoint...');
     
-    const response = await fetch('https://workshop-backend-six.vercel.app/api/create-booking-from-session', {
+    const response = await fetch(`${API_BASE_URL}/api/create-booking-from-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -189,10 +200,9 @@ const PaymentSuccessPage: React.FC = () => {
       }),
     });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Booking created successfully:', result);
-        setBookingCreated(true);
+              if (response.ok) {
+          const result = await response.json();
+          setBookingCreated(true);
         
         // Clean up localStorage
         localStorage.removeItem('checkoutCart');
@@ -200,13 +210,15 @@ const PaymentSuccessPage: React.FC = () => {
       } else {
         const errorData = await response.json();
         console.error('❌ Failed to create booking:', errorData);
+        console.error('❌ HTTP Status:', response.status);
+        console.error('❌ Response Headers:', Object.fromEntries(response.headers.entries()));
+        console.error('❌ Full Error Response:', errorData);
         
         // Check if it's a duplicate (which is actually success)
         if (errorData.isDuplicate) {
           setBookingCreated(true);
-          console.log('✅ Duplicate detected - booking already exists');
         } else {
-          setBookingError('Failed to create booking: ' + (errorData.error || 'Unknown error'));
+          setBookingError('Failed to create booking: ' + (errorData.error || errorData.message || 'Unknown error'));
         }
       }
           } catch (error) {
@@ -218,18 +230,12 @@ const PaymentSuccessPage: React.FC = () => {
       }
     };
 
-  const handleViewServices = () => {
-    navigate('/dashboard/past-services');
-  };
 
-  const handleBackToCatalog = () => {
-    navigate('/user-dashboard');
-  };
 
   return (
     <>
       <Navbar />
-      <div  id="ret"style={{ background: '#111', minHeight: '100vh', padding: '48px 24px' }}>
+      <div id="ret" style={{ background: '#111', minHeight: '100vh', padding: '120px 24px 48px 24px' }}>
         <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
           {/* Success Icon */}
           <div style={{ 
@@ -240,7 +246,7 @@ const PaymentSuccessPage: React.FC = () => {
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center', 
-            margin: '0 auto 32px',
+            margin: '40px auto 32px',
             fontSize: '60px'
           }}>
             ✅
@@ -252,7 +258,7 @@ const PaymentSuccessPage: React.FC = () => {
           </h1>
           
           <p style={{ color: '#bdbdbd', fontSize: '1.2rem', marginBottom: '32px', lineHeight: '1.6' }}>
-            Thank you for your payment. Your service booking has been confirmed and will appear in your past services.
+            Thank you for your booking! Your services have been confirmed and will appear in your past services.
           </p>
 
           {/* Booking Status */}
@@ -278,15 +284,11 @@ const PaymentSuccessPage: React.FC = () => {
               marginBottom: '24px',
               fontWeight: '600'
             }}>
-              ✅ Basic Booking Created Successfully! 
-              <br />
-              <small style={{ fontSize: '0.9rem', opacity: 0.9 }}>
-                (Service details will be updated by our team)
-              </small>
+              ✅ Your Booking is Confirmed!
             </div>
           )}
           
-          {bookingError && (
+          {bookingError && !bookingCreated && (
             <div style={{ 
               background: '#dc3545', 
               color: '#fff', 
@@ -299,17 +301,100 @@ const PaymentSuccessPage: React.FC = () => {
             </div>
           )}
 
-          {sessionId && (
+
+
+
+
+          {/* Services Booked */}
+          {bookingCreated && (
             <div style={{ 
               background: '#181818', 
-              borderRadius: '12px', 
-              padding: '20px', 
+              borderRadius: '16px', 
+              padding: '32px', 
               marginBottom: '32px',
               border: '1px solid #232323'
             }}>
-              <p style={{ color: '#888', fontSize: '0.9rem', margin: 0 }}>
-                <strong>Transaction ID:</strong> {sessionId}
-              </p>
+              <h3 style={{ color: '#ffd600', fontSize: '1.3rem', fontWeight: '600', marginBottom: '20px' }}>
+                📋 Services You Booked:
+              </h3>
+              <div style={{ textAlign: 'left', color: '#bdbdbd', lineHeight: '1.8' }}>
+                {(() => {
+                  try {
+                    const pendingBookingData = localStorage.getItem('pendingBooking');
+                    if (pendingBookingData) {
+                      const bookingData = JSON.parse(pendingBookingData);
+                      return (
+                        <>
+                          {bookingData.cart.map((item: any, index: number) => (
+                            <div key={index} style={{ 
+                              padding: '16px', 
+                              background: '#232323', 
+                              borderRadius: '8px', 
+                              marginBottom: '12px',
+                              border: '1px solid #333'
+                            }}>
+                              <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#fff', fontSize: '1.1rem' }}>
+                                {item.service.label}
+                              </p>
+                              <p style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#888' }}>
+                                {item.service.sub}
+                              </p>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ color: '#ffd600', fontSize: '0.9rem' }}>
+                                  💰 Service: £{item.service.price}
+                                </span>
+                                {item.service.labourHours && item.service.labourHours > 0 ? (
+                                  <span style={{ color: '#ffd600', fontSize: '0.9rem' }}>
+                                    🔧 Labour: £{(item.service.labourHours * (item.service.labourCost || 10)).toFixed(2)}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: '#4CAF50', fontSize: '0.9rem' }}>
+                                    ✅ Labour Included
+                                  </span>
+                                )}
+                              </div>
+                              {item.service.labourHours && item.service.labourHours > 0 && (
+                                <div style={{ 
+                                  marginTop: '8px', 
+                                  padding: '8px', 
+                                  background: '#1a1a1a', 
+                                  borderRadius: '4px',
+                                  border: '1px solid #444'
+                                }}>
+                                  <p style={{ margin: '0', color: '#ffd600', fontSize: '0.85rem', fontWeight: '600' }}>
+                                    💳 Total: £{(item.service.price + (item.service.labourHours * (item.service.labourCost || 10))).toFixed(2)}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          <div style={{ 
+                            marginTop: '16px', 
+                            padding: '16px', 
+                            background: '#1a1a1a', 
+                            borderRadius: '8px',
+                            border: '2px solid #ffd600'
+                          }}>
+                            <p style={{ margin: '0', color: '#ffd600', fontSize: '1.1rem', fontWeight: '700', textAlign: 'center' }}>
+                              🎯 Total Cart Amount: £{(() => {
+                                const total = bookingData.cart.reduce((sum: number, item: any) => {
+                                  const servicePrice = item.service.price;
+                                  const labourCost = item.service.labourHours ? (item.service.labourHours * (item.service.labourCost || 10)) : 0;
+                                  return sum + servicePrice + labourCost;
+                                }, 0);
+                                return total.toFixed(2);
+                              })()}
+                            </p>
+                          </div>
+                        </>
+                      );
+                    }
+                    return <p>Service details will be updated by our team</p>;
+                  } catch (error) {
+                    return <p>Service details will be updated by our team</p>;
+                  }
+                })()}
+              </div>
             </div>
           )}
 
@@ -329,43 +414,11 @@ const PaymentSuccessPage: React.FC = () => {
               <p>• Our team will review your service request</p>
               <p>• You'll receive a confirmation email shortly</p>
               <p>• We'll contact you to schedule your appointment</p>
+              <p>• You can reply to messages by opening your dashboard</p>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              onClick={handleViewServices}
-              style={{
-                background: '#ffd600',
-                color: '#111',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '16px 32px',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '1.1rem'
-              }}
-            >
-              📋 View My Services
-            </button>
-            
-            <button
-              onClick={handleBackToCatalog}
-              style={{
-                background: '#232323',
-                color: '#fff',
-                border: '1px solid #444',
-                borderRadius: '8px',
-                padding: '16px 32px',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '1.1rem'
-              }}
-            >
-              🛒 Book More Services
-            </button>
-          </div>
+
 
           {/* Contact Info */}
           <div style={{ 
@@ -382,39 +435,7 @@ const PaymentSuccessPage: React.FC = () => {
             </p>
           </div>
           
-          {/* Debug Section */}
-          <div style={{ 
-            marginTop: '24px', 
-            padding: '24px', 
-            background: '#232323', 
-            borderRadius: '12px',
-            border: '1px solid #444'
-          }}>
-            <h4 style={{ color: '#ffd600', marginBottom: '16px' }}>🔍 Debug Information</h4>
-            <button
-              onClick={() => {
-                console.log('🔍 Manual storage check:');
-                console.log('📦 checkoutCart:', localStorage.getItem('checkoutCart'));
-                console.log('🚗 checkoutCarDetails:', localStorage.getItem('checkoutCarDetails'));
-                console.log('📦 _mechanics_cart:', localStorage.getItem('_mechanics_cart'));
-                console.log('🚗 _mechanics_carDetails:', localStorage.getItem('_mechanics_carDetails'));
-                console.log('📦 session checkoutCart:', sessionStorage.getItem('checkoutCart'));
-                console.log('🚗 session checkoutCarDetails:', sessionStorage.getItem('checkoutCarDetails'));
-                alert('Check browser console for storage data');
-              }}
-              style={{
-                background: '#444',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '8px 16px',
-                cursor: 'pointer',
-                fontSize: '0.9rem'
-              }}
-            >
-              Check Storage Data
-            </button>
-          </div>
+
         </div>
       </div>
       <Footer />

@@ -8,7 +8,7 @@ const PastServicesPage: React.FC = () => {
   const [error, setError] = useState('');
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
-  const API_BASE_URL = 'https://workshop-backend-six.vercel.app';
+  const API_BASE_URL = 'http://localhost:5001';
 
   // Auto-fetch services when page opens
   useEffect(() => {
@@ -297,34 +297,164 @@ const PastServicesPage: React.FC = () => {
                       fontWeight: 600, 
                       marginBottom: 16 
                     }}>
-                      Service Details
+                      💰 Service Cost Breakdown
                     </div>
                     <div style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                       gap: 16
                     }}>
-                      <div>
-                        <span style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>Labour Hours:</span>
-                        <div style={{ color: '#fff', fontWeight: 500 }}>{service.labourHours || 0}</div>
+                      {/* Service Base Price */}
+                      <div style={{
+                        background: '#1a1a1a',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: '1px solid #333'
+                      }}>
+                        <span style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>🔧 Service Base Price:</span>
+                        <div style={{ color: '#ffd600', fontWeight: 600, fontSize: '1.1rem' }}>
+                          {formatPrice(service.service?.price || 0)}
+                        </div>
                       </div>
-                      <div>
-                        <span style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>Labour Cost:</span>
-                        <div style={{ color: '#fff', fontWeight: 500 }}>{formatPrice(service.labourCost)}</div>
+                      
+                      {/* Labour Charges */}
+                      <div style={{
+                        background: '#1a1a1a',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: '1px solid #333'
+                      }}>
+                        <span style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>⏱️ Labour Charges:</span>
+                        <div style={{ color: '#fff', fontWeight: 500, marginBottom: '4px' }}>
+                          {service.labourHours || 0} hours
+                        </div>
+                        <div style={{ color: '#ffd600', fontWeight: 600, fontSize: '1.1rem' }}>
+                          {formatPrice(service.labourCost || 0)}
+                        </div>
                       </div>
-                      <div>
-                        <span style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>Parts Cost:</span>
-                        <div style={{ color: '#fff', fontWeight: 500 }}>{formatPrice(service.partsCost)}</div>
+                      
+                      {/* Parts Cost */}
+                      <div style={{
+                        background: '#1a1a1a',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: '1px solid #333'
+                      }}>
+                        <span style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>🔩 Parts Cost:</span>
+                        <div style={{ color: '#ffd600', fontWeight: 600, fontSize: '1.1rem' }}>
+                          {formatPrice(service.partsCost || 0)}
+                        </div>
                       </div>
-                      <div>
-                        <span style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>Subtotal:</span>
-                        <div style={{ color: '#fff', fontWeight: 500 }}>{formatPrice(service.subtotal)}</div>
+                      
+                      {/* Subtotal */}
+                      <div style={{
+                        background: '#1a1a1a',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: '1px solid #333'
+                      }}>
+                        <span style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>📊 Subtotal:</span>
+                        <div style={{ color: '#fff', fontWeight: 500, fontSize: '1.1rem' }}>
+                          {formatPrice(service.subtotal || 0)}
+                        </div>
                       </div>
-                      <div>
-                        <span style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>VAT (20%):</span>
-                        <div style={{ color: '#fff', fontWeight: 500 }}>{formatPrice(service.vat)}</div>
+                      
+                      {/* VAT */}
+                      <div style={{
+                        background: '#1a1a1a',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: '1px solid #333'
+                      }}>
+                        <span style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>🏛️ VAT (20%):</span>
+                        <div style={{ color: '#fff', fontWeight: 500, fontSize: '1.1rem' }}>
+                          {formatPrice(service.vat || 0)}
+                        </div>
                       </div>
                     </div>
+                    
+                    {/* Total Amount - Highlighted */}
+                    <div style={{
+                      background: 'linear-gradient(135deg, #ffd700, #ffed4e)',
+                      color: '#000',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      marginTop: '20px',
+                      textAlign: 'center',
+                      fontWeight: '700',
+                      fontSize: '1.3rem',
+                      boxShadow: '0 4px 20px rgba(255, 215, 0, 0.3)'
+                    }}>
+                      💳 Total Amount: {formatPrice(service.total)}
+                    </div>
+                    
+                    {/* Labour vs Service Breakdown */}
+                    {(service.labourCost > 0 || service.service?.price > 0) && (
+                      <div style={{
+                        background: '#1a1a1a',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        marginTop: '16px',
+                        border: '1px solid #444'
+                      }}>
+                        <div style={{ 
+                          color: '#ffd600', 
+                          fontSize: '1rem', 
+                          fontWeight: 600, 
+                          marginBottom: '12px' 
+                        }}>
+                          📋 Cost Breakdown Summary
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '8px 0',
+                          borderBottom: '1px solid #333'
+                        }}>
+                          <span style={{ color: '#bdbdbd' }}>Service Fee:</span>
+                          <span style={{ color: '#fff', fontWeight: '500' }}>
+                            {formatPrice(service.service?.price || 0)}
+                          </span>
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '8px 0',
+                          borderBottom: '1px solid #333'
+                        }}>
+                          <span style={{ color: '#bdbdbd' }}>Labour Charges:</span>
+                          <span style={{ color: '#fff', fontWeight: '500' }}>
+                            {formatPrice(service.labourCost || 0)}
+                          </span>
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '8px 0',
+                          borderBottom: '1px solid #333'
+                        }}>
+                          <span style={{ color: '#bdbdbd' }}>Parts Cost:</span>
+                          <span style={{ color: '#fff', fontWeight: '500' }}>
+                            {formatPrice(service.partsCost || 0)}
+                          </span>
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '8px 0',
+                          fontWeight: '600'
+                        }}>
+                          <span style={{ color: '#ffd600' }}>Total:</span>
+                          <span style={{ color: '#ffd600', fontSize: '1.1rem' }}>
+                            {formatPrice(service.total)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Parts Used */}
