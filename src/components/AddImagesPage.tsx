@@ -37,33 +37,52 @@ const AddImagesPage: React.FC = () => {
   const handleUpload = async (booking: any) => {
     const files = selectedFiles[booking._id];
     if (!files || files.length === 0) return;
+    
     setUploading(booking._id);
     const formData = new FormData();
+    
     for (const file of files) {
       formData.append('images', file);
     }
     formData.append('userId', 'admin');
     formData.append('serviceId', booking._id);
+    
     // Add customer email to associate images with the customer
     if (booking.customer && booking.customer.email) {
       formData.append('customerEmail', booking.customer.email);
     }
 
     try {
+      console.log('🔄 Uploading images for service:', booking._id);
+      console.log('📧 Customer email:', booking.customer?.email);
+      console.log('📁 Files to upload:', files.length);
+      
       const res = await fetch(`${API_BASE_URL}/upload-service-image`, {
         method: 'POST',
         body: formData,
       });
+      
+      if (!res.ok) {
+        throw new Error(`Upload failed: ${res.status} ${res.statusText}`);
+      }
+      
       const data = await res.json();
+      console.log('✅ Upload successful:', data);
+      
       setUploading(null);
       setServiceImages(prev => ({
         ...prev,
         [booking._id]: [ ...(prev[booking._id] || []), ...(data.images || []) ]
       }));
       setSelectedFiles(prev => ({ ...prev, [booking._id]: [] }));
-    } catch (err) {
-      console.error('Upload failed:', err);
+      
+      // Show success message
+      alert(`Successfully uploaded ${files.length} image(s)!`);
+      
+    } catch (err: any) {
+      console.error('❌ Upload failed:', err);
       setUploading(null);
+      alert(`Upload failed: ${err.message}`);
     }
   };
 
