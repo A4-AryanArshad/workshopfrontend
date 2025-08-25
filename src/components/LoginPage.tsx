@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import { API_BASE_URL } from '../config';
 
 const LoginLogo = () => (
   <div style={{ textAlign: 'center', marginBottom: 32 }}>
@@ -39,7 +40,7 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch('https://workshop-backend-six.vercel.app/login', {
+      const res = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -49,7 +50,13 @@ const LoginPage: React.FC = () => {
       
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.role);
-      localStorage.setItem('userEmail', email); // Store user email for automatic use
+      
+      // For admin users, always store the correct admin email
+      if (data.role === 'admin') {
+        localStorage.setItem('userEmail', 'admin1234@gmail.com'); // Use correct admin email
+      } else {
+        localStorage.setItem('userEmail', email); // Store user email for regular users
+      }
       
       if (data.role === 'admin') {
         // Check if there's a redirect destination with service info

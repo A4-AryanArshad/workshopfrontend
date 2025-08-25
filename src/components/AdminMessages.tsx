@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { useNavigate, useParams } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 interface Message {
   _id: string;
@@ -71,6 +72,23 @@ const AdminMessages: React.FC = () => {
   // Get user info from localStorage
   const userEmail = localStorage.getItem('userEmail');
   const currentUserEmail = userEmail;
+  
+  // Debug: Log admin status and email
+  const isAdmin = localStorage.getItem('role') === 'admin';
+  const adminEmail = 'admin1234@gmail.com';
+  
+  // Ensure admin email is always available
+  const effectiveUserEmail = (isAdmin && currentUserEmail === adminEmail) ? currentUserEmail : adminEmail;
+  
+  console.log('🔍 Admin status check:', {
+    isAdmin,
+    userEmail,
+    currentUserEmail,
+    adminEmail,
+    effectiveUserEmail,
+    role: localStorage.getItem('role'),
+    token: localStorage.getItem('token') ? 'Present' : 'Missing'
+  });
 
   console.log('🚀 Component state initialized:', {
     userEmail,
@@ -88,10 +106,11 @@ const AdminMessages: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) {
         console.log('⚠️ No token found, cannot fetch user info');
+        setCurrentUserName('Admin Staff');
         return;
       }
 
-      const response = await fetch('https://workshop-backend-six.vercel.app/api/current-user', {
+      const response = await fetch(`${API_BASE_URL}/api/current-user`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -101,6 +120,12 @@ const AdminMessages: React.FC = () => {
         const userData = await response.json();
         console.log('✅ Current user data fetched:', userData);
         setCurrentUserName(userData.name || 'Admin Staff');
+        
+        // Also update the userEmail to ensure it matches the admin user in database
+        if (userData.role === 'admin') {
+          localStorage.setItem('userEmail', userData.email);
+          console.log('✅ Updated localStorage userEmail to match admin user:', userData.email);
+        }
       } else {
         console.log('⚠️ Failed to fetch user info, using default name');
         setCurrentUserName('Admin Staff');
@@ -118,6 +143,15 @@ const AdminMessages: React.FC = () => {
     console.log('🔄 useEffect triggered, localStorage userEmail:', localStorage.getItem('userEmail'));
     console.log('🔄 useEffect triggered, recentConversations length:', recentConversations.length);
     console.log('🔄 useEffect triggered, bookings length:', bookings.length);
+    
+    // Ensure admin email is set correctly
+    if (localStorage.getItem('role') === 'admin') {
+      const adminEmail = 'admin1234@gmail.com';
+      if (localStorage.getItem('userEmail') !== adminEmail) {
+        localStorage.setItem('userEmail', adminEmail);
+        console.log('✅ Updated localStorage userEmail to admin email:', adminEmail);
+      }
+    }
     
     // Fetch current user info first
     fetchCurrentUser();
@@ -194,7 +228,7 @@ const AdminMessages: React.FC = () => {
         
         // Fetch recent conversations (bookings with messages, sorted by recent activity)
         console.log('📞 Fetching recent conversations...');
-        const conversationsResponse = await fetch('https://workshop-backend-six.vercel.app/api/admin/recent-conversations');
+        const conversationsResponse = await fetch(`${API_BASE_URL}/api/admin/recent-conversations`);
         console.log('📞 Recent conversations response status:', conversationsResponse.status);
         console.log('📞 Recent conversations response ok:', conversationsResponse.ok);
         
@@ -210,7 +244,7 @@ const AdminMessages: React.FC = () => {
         
         // Also fetch all bookings for the dropdown
         console.log('📞 Fetching all bookings...');
-        const response = await fetch('https://workshop-backend-six.vercel.app/api/bookings');
+        const response = await fetch(`${API_BASE_URL}/api/bookings`);
         const data = await response.json();
         
         let allBookings: any[] = [];
@@ -257,9 +291,9 @@ const AdminMessages: React.FC = () => {
       try {
         console.log('🔍 fetchMessages called for booking:', bookingId);
         setMessagesLoading(true);
-        const url = currentUserEmail 
-          ? `https://workshop-backend-six.vercel.app/api/bookings/${bookingId}/messages?userEmail=${encodeURIComponent(currentUserEmail)}`
-          : `https://workshop-backend-six.vercel.app/api/bookings/${bookingId}/messages`;
+        
+        // Use the effective admin email for API calls
+        const url = `${API_BASE_URL}/api/bookings/${bookingId}/messages?userEmail=${encodeURIComponent(effectiveUserEmail)}`;
         
         console.log('🔍 Fetching messages from URL:', url);
         
@@ -314,7 +348,7 @@ const AdminMessages: React.FC = () => {
     const refreshConversations = async () => {
       try {
         console.log('🔄 Refreshing conversations...');
-        const conversationsResponse = await fetch('https://workshop-backend-six.vercel.app/api/admin/recent-conversations');
+        const conversationsResponse = await fetch(`${API_BASE_URL}/api/admin/recent-conversations`);
         const conversationsData = await conversationsResponse.json();
         
         if (conversationsData.success) {
@@ -437,10 +471,13 @@ const AdminMessages: React.FC = () => {
       e.preventDefault();
       if (!newMessage.trim() || !selectedBooking) return;
 
+      // Use the effective admin email from component state
+      const emailToUse = effectiveUserEmail;
+
       console.log('🚀 sendMessage called with:', {
         message: newMessage.trim(),
         senderName: currentUserName,
-        senderEmail: currentUserEmail,
+        senderEmail: emailToUse,
         senderType: 'admin',
         bookingId: selectedBooking._id
       });
@@ -450,13 +487,13 @@ const AdminMessages: React.FC = () => {
         const messageData = {
           message: newMessage.trim(),
           senderName: currentUserName,
-          senderEmail: currentUserEmail,
+          senderEmail: emailToUse,
           senderType: 'admin'
         };
 
         console.log('📤 Sending message data:', messageData);
 
-        const response = await fetch(`https://workshop-backend-six.vercel.app/api/bookings/${selectedBooking._id}/messages`, {
+        const response = await fetch(`${API_BASE_URL}/api/bookings/${selectedBooking._id}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(messageData)

@@ -3,6 +3,7 @@ import Navbar from './Navbar';
 import './Home.css';
 import Footer from './Footer';
 import dayjs from 'dayjs';
+import CircularLoader from './CircularLoader';
 
 const PlusIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 12, verticalAlign: 'middle', display: 'inline-block' }}>
@@ -81,8 +82,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     setIsAdmin(localStorage.getItem('role') === 'admin');
     fetch('https://workshop-backend-six.vercel.app/api/services')
       .then(r => r.json())
-      .then((list: ServiceItem[]) => setServiceOptions(list))
-      .catch(() => setServiceOptions([]));
+      .then((list: ServiceItem[]) => {
+        if (Array.isArray(list)) {
+          setServiceOptions(list);
+        } else {
+          console.error('Services API returned non-array:', list);
+          setServiceOptions([]);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to fetch services:', error);
+        setServiceOptions([]);
+      });
   }, []);
 
   const refreshServices = () => {
@@ -90,11 +101,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     fetch('https://workshop-backend-six.vercel.app/api/services')
       .then(r => r.json())
       .then((list: ServiceItem[]) => {
-        console.log('🔧 Services refreshed:', list.length, 'services loaded');
-        console.log('🔧 Sample service with labour costs:', list.find(s => s.labourCost && s.labourCost > 0));
-        setServiceOptions(list);
+        if (Array.isArray(list)) {
+          console.log('🔧 Services refreshed:', list.length, 'services loaded');
+          console.log('🔧 Sample service with labour costs:', list.find(s => s.labourCost && s.labourCost > 0));
+          setServiceOptions(list);
+        } else {
+          console.error('Services API returned non-array:', list);
+          setServiceOptions([]);
+        }
       })
-      .catch(() => setServiceOptions([]));
+      .catch((error) => {
+        console.error('Failed to refresh services:', error);
+        setServiceOptions([]);
+      });
   };
 
   // Add state for manual booking fields
@@ -208,8 +227,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       time: selectedTime,
       reg: 'KE14OYZ',
       price: 324,
-      service: serviceOptions[selectedService].label,
-      duration: serviceOptions[selectedService].sub,
+      service: Array.isArray(serviceOptions) && serviceOptions[selectedService] ? serviceOptions[selectedService].label : 'Unknown Service',
+      duration: Array.isArray(serviceOptions) && serviceOptions[selectedService] ? serviceOptions[selectedService].sub : 'Unknown Duration',
     };
     
     setBookings(b => [...b, newBooking]);
@@ -259,7 +278,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     setPartRow({ partNumber: '', name: '', supplier: '', cost: '', profit: '20', price: '', qty: '', booked: '' });
   };
 
-  const bookingsForDate = bookings.filter(b => {
+  const bookingsForDate = Array.isArray(bookings) ? bookings.filter(b => {
     console.log('🔍 Checking booking:', b);
     console.log('🔍 Booking date:', b.date, 'type:', typeof b.date);
     console.log('🔍 Dashboard date:', dashboardDate.format('YYYY-MM-DD'));
@@ -288,24 +307,26 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     }
     
     return match;
-  });
+  }) : [];
   
-  console.log('📅 Total bookings:', bookings.length);
+  console.log('📅 Total bookings:', Array.isArray(bookings) ? bookings.length : 'bookings is not an array');
   console.log('📅 Bookings for current date:', bookingsForDate.length);
   console.log('📅 Current dashboard date:', dashboardDate.format('YYYY-MM-DD'));
   console.log('📅 Today\'s date:', dayjs().format('YYYY-MM-DD'));
   
   // Debug: Show all bookings with their dates
-  bookings.forEach((b, index) => {
-    console.log(`📅 Booking ${index}:`, {
-      id: b._id,
-      date: b.date,
-      dateType: typeof b.date,
-      time: b.time,
-      category: b.category,
-      registration: b.car?.registration
+  if (Array.isArray(bookings)) {
+    bookings.forEach((b, index) => {
+      console.log(`📅 Booking ${index}:`, {
+        id: b._id,
+        date: b.date,
+        dateType: typeof b.date,
+        time: b.time,
+        category: b.category,
+        registration: b.car?.registration
+      });
     });
-  });
+  }
 
   const handleDVLAlookup = async () => {
     setLookupLoading(true);
@@ -337,7 +358,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       .then(data => {
         console.log('📅 Fetched bookings:', data);
         console.log('📅 Current dashboard date:', dashboardDate.format('YYYY-MM-DD'));
-        setBookings(data.success ? data.bookings : data);
+        if (data.success && Array.isArray(data.bookings)) {
+          setBookings(data.bookings);
+        } else if (Array.isArray(data)) {
+          setBookings(data);
+        } else {
+          console.error('Bookings API returned non-array:', data);
+          setBookings([]);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to fetch bookings:', error);
+        setBookings([]);
       })
       .finally(() => setBookingsLoading(false));
   }, []);
@@ -364,6 +396,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
 
   // Calculate dynamic quote summary
   const getLabourHours = () => {
+    if (!Array.isArray(serviceOptions)) return 2; // default 2h if serviceOptions is not an array
     const candidate = selectedService < serviceOptions.length
       ? serviceOptions[selectedService]?.sub
       : customServices[selectedService - serviceOptions.length]?.sub;
@@ -373,6 +406,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   };
   
   const getLabourCostPerHour = () => {
+    if (!Array.isArray(serviceOptions)) return 0; // return 0 if serviceOptions is not an array
     const candidate = selectedService < serviceOptions.length
       ? serviceOptions[selectedService]?.labourCost
       : customServices[selectedService - serviceOptions.length]?.labourCost;
@@ -388,6 +422,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   console.log('🔧 Labour calculation - hours:', labourHours, 'cost per hour:', labourCostPerHour, 'total cost:', labourCost);
   const partsCost = parts.reduce((sum, p) => sum + (parseFloat(p.price || 0) * (p.qty || 1)), 0);
   const getServicePrice = () => {
+    if (!Array.isArray(serviceOptions)) return 0; // return 0 if serviceOptions is not an array
     const candidate = selectedService < serviceOptions.length
       ? serviceOptions[selectedService]?.price
       : (customServices[selectedService - serviceOptions.length]?.price as any);
@@ -493,7 +528,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       
       // Refresh bookings
       const res = await fetch('https://workshop-backend-six.vercel.app/api/bookings');
-      setBookings(await res.json());
+      const bookingsData = await res.json();
+      if (Array.isArray(bookingsData)) {
+        setBookings(bookingsData);
+      } else {
+        console.error('Bookings API returned non-array:', bookingsData);
+        setBookings([]);
+      }
       setShowManual(false);
       // Reset manual form
       setManualCar({ make: '', model: '', year: '', registration: '' });
@@ -693,7 +734,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       
       // Refresh bookings
       const res = await fetch('https://workshop-backend-six.vercel.app/api/bookings');
-      setBookings(await res.json());
+      const bookingsData = await res.json();
+      if (Array.isArray(bookingsData)) {
+        setBookings(bookingsData);
+      } else {
+        console.error('Bookings API returned non-array:', bookingsData);
+        setBookings([]);
+      }
       setShowLookupBookingModal(false);
       // Reset lookup form
       setLookupCar(null);
@@ -715,7 +762,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     if (showPartsModal) {
       fetch('https://workshop-backend-six.vercel.app/api/parts')
         .then(res => res.json())
-        .then(setPartsTable);
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setPartsTable(data);
+          } else {
+            console.error('Parts API returned non-array:', data);
+            setPartsTable([]);
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to fetch parts:', error);
+          setPartsTable([]);
+        });
     }
   }, [showPartsModal]);
 
@@ -726,7 +784,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     await fetch(`https://workshop-backend-six.vercel.app/api/parts/${id}`, { method: 'DELETE' });
     fetch('https://workshop-backend-six.vercel.app/api/parts')
       .then(res => res.json())
-      .then(setPartsTable);
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setPartsTable(data);
+        } else {
+          console.error('Parts API returned non-array:', data);
+          setPartsTable([]);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to fetch parts:', error);
+        setPartsTable([]);
+      });
   };
 
   // Open edit part modal
@@ -774,7 +843,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
           // Refresh parts list
           fetch('https://workshop-backend-six.vercel.app/api/parts')
             .then(res => res.json())
-            .then(setPartsTable);
+            .then((data) => {
+              if (Array.isArray(data)) {
+                setPartsTable(data);
+              } else {
+                console.error('Parts API returned non-array:', data);
+                setPartsTable([]);
+              }
+            })
+            .catch((error) => {
+              console.error('Failed to fetch parts:', error);
+              setPartsTable([]);
+            });
         }
       }
       
@@ -914,7 +994,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        setUserServices(data);
+        if (Array.isArray(data)) {
+          setUserServices(data);
+        } else {
+          console.error('User Services API returned non-array:', data);
+          setUserServices([]);
+        }
       } else {
         setUserServices([]);
       }
@@ -1186,6 +1271,17 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
         }
       `}</style>
       <Navbar />
+      
+      {/* Circular Loader for Services */}
+      {serviceOptions.length === 0 && (
+        <CircularLoader 
+          size="large"
+          color="#ffd600"
+          message="Loading services..."
+          showBackground={true}
+        />
+      )}
+      
       <div id="rrrre">
         <div style={{ background: '#111', minHeight: '100vh', padding: 0 }}>
           <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
@@ -1230,8 +1326,28 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
 
 
             <div style={{ background: '#181818', borderRadius: 16, boxShadow: '0 4px 24px #0006', padding: 0, overflow: 'hidden', minHeight: 600 }}>
-              <div style={{ width: '100%', overflowX: 'auto' }}>
-                <table className="dashboard-table"
+              
+              {/* Circular Loader for Bookings */}
+              {bookingsLoading && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  padding: '60px 20px',
+                  minHeight: 400
+                }}>
+                  <CircularLoader 
+                    size="medium"
+                    color="#ffd600"
+                    message="Loading bookings..."
+                    showBackground={false}
+                  />
+                </div>
+              )}
+              
+              {!bookingsLoading && (
+                <div style={{ width: '100%', overflowX: 'auto' }}>
+                  <table className="dashboard-table"
                   style={{
                     width: '100%',
                     minWidth: 700,
@@ -1336,6 +1452,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                   </tbody>
                 </table>
               </div>
+              )}
             </div>
           </div>
         </div>
@@ -1594,7 +1711,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
               marginBottom: '18px',
               width: '100%',
             }}>
-              {serviceOptions.map((s, i) => {
+              {Array.isArray(serviceOptions) && serviceOptions.map((s, i) => {
                 const adminCategory = mapToAdminCategory(s);
                 const categoryColor = adminCategory === 'tyres' ? '#ff6b6b' : adminCategory === 'mechanical' ? '#4ecdc4' : '#ffd600';
                 return (
@@ -1925,9 +2042,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
               <div className="schedule-modal-summary-title">Booking Summary</div>
               <div style={{ marginBottom: 6 }}>Services:</div>
               <ul className="schedule-modal-summary-list">
-                <li>{serviceOptions[selectedService].label} ({serviceOptions[selectedService].sub.split(' - ')[0]}){selectedTime ? ` - ${selectedTime}` : ''}</li>
+                <li>{Array.isArray(serviceOptions) && serviceOptions[selectedService] ? serviceOptions[selectedService].label : 'Unknown Service'} ({Array.isArray(serviceOptions) && serviceOptions[selectedService] ? serviceOptions[selectedService].sub.split(' - ')[0] : 'Unknown Duration'}){selectedTime ? ` - ${selectedTime}` : ''}</li>
               </ul>
-              <div style={{ marginTop: 12, fontWeight: 600, color: '#ffd600' }}>Total: £{serviceOptions[selectedService].price || 0}</div>
+              <div style={{ marginTop: 12, fontWeight: 600, color: '#ffd600' }}>Total: £{Array.isArray(serviceOptions) && serviceOptions[selectedService] ? (serviceOptions[selectedService].price || 0) : 0}</div>
             </div>
             <div className="modal-btn-row">
               <button className="modal-btn-outline modal-btn-block" onClick={() => setShowScheduleModal(false)}>Cancel</button>
@@ -2407,7 +2524,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
               marginBottom: '18px',
               width: '100%',
             }}>
-              {serviceOptions.map((s, i) => {
+              {Array.isArray(serviceOptions) && serviceOptions.map((s, i) => {
                 const adminCategory = mapToAdminCategory(s);
                 const categoryColor = adminCategory === 'tyres' ? '#ff6b6b' : adminCategory === 'mechanical' ? '#4ecdc4' : '#ffd600';
                 return (
@@ -2805,8 +2922,28 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
             {/* Parts Inventory Table */}
             <div style={{ background: '#181818', borderRadius: 12, padding: 20, border: '1px solid #444' }}>
               <h3 style={{ color: '#ffd600', marginBottom: 16 }}>Parts Inventory</h3>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', color: '#eaeaea' }}>
+              
+              {/* Circular Loader for Parts */}
+              {partsTable.length === 0 && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  padding: '40px 20px',
+                  minHeight: 200
+                }}>
+                  <CircularLoader 
+                    size="medium"
+                    color="#ffd600"
+                    message="Loading parts..."
+                    showBackground={false}
+                  />
+                </div>
+              )}
+              
+              {partsTable.length > 0 && (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', color: '#eaeaea' }}>
                   <thead>
                     <tr style={{ background: '#232323', color: '#bdbdbd' }}>
                       <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #444' }}>Part Number</th>
@@ -2857,6 +2994,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                   </tbody>
                 </table>
               </div>
+              )}
             </div>
 
             {/* Edit Part Modal */}
