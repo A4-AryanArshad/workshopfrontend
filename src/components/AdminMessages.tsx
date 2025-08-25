@@ -231,38 +231,69 @@ const AdminMessages: React.FC = () => {
         
         // Fetch recent conversations (bookings with messages, sorted by recent activity)
         console.log('📞 Fetching recent conversations...');
-        const conversationsResponse = await fetch(`${API_BASE_URL}/api/admin/recent-conversations`);
-        console.log('📞 Recent conversations response status:', conversationsResponse.status);
-        console.log('📞 Recent conversations response ok:', conversationsResponse.ok);
-        
-        const conversationsData = await conversationsResponse.json();
-        console.log('📞 Recent conversations raw data:', conversationsData);
+        console.log('📞 API URL:', `${API_BASE_URL}/api/admin/recent-conversations`);
         
         let conversations: any[] = [];
-        if (conversationsData.success) {
-          conversations = conversationsData.conversations || [];
-        } else {
-          console.error('❌ Failed to fetch recent conversations:', conversationsData.error);
+        try {
+          const conversationsResponse = await fetch(`${API_BASE_URL}/api/admin/recent-conversations`);
+          console.log('📞 Recent conversations response status:', conversationsResponse.status);
+          console.log('📞 Recent conversations response ok:', conversationsResponse.ok);
+          
+          if (!conversationsResponse.ok) {
+            console.error('❌ HTTP Error:', conversationsResponse.status, conversationsResponse.statusText);
+            throw new Error(`HTTP ${conversationsResponse.status}: ${conversationsResponse.statusText}`);
+          }
+          
+          const conversationsData = await conversationsResponse.json();
+          console.log('📞 Recent conversations raw data:', conversationsData);
+          
+          if (conversationsData.success) {
+            conversations = conversationsData.conversations || [];
+            console.log('✅ Conversations loaded:', conversations.length);
+          } else {
+            console.error('❌ Failed to fetch recent conversations:', conversationsData.error);
+            console.log('❌ Full response:', conversationsData);
+          }
+        } catch (fetchError) {
+          console.error('❌ Fetch error for recent conversations:', fetchError);
+          // Don't throw, just continue with empty conversations
         }
         
         // Also fetch all bookings for the dropdown
         console.log('📞 Fetching all bookings...');
-        const response = await fetch(`${API_BASE_URL}/api/bookings`);
-        const data = await response.json();
+        console.log('📞 Bookings API URL:', `${API_BASE_URL}/api/bookings`);
         
         let allBookings: any[] = [];
-        if (data.success) {
-          allBookings = data.bookings || [];
-          console.log('📊 All bookings data:', allBookings.map((b: any) => ({
-            service: b.service?.label,
-            carReg: b.car?.registration,
-            hasCar: !!b.car,
-            hasCarReg: !!b.car?.registration
-          })));
-          setBookings(allBookings);
-          console.log('✅ All bookings state set to:', allBookings.length, 'items');
-        } else {
-          console.error('Failed to fetch bookings:', data.error);
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/bookings`);
+          console.log('📞 Bookings response status:', response.status);
+          console.log('📞 Bookings response ok:', response.ok);
+          
+          if (!response.ok) {
+            console.error('❌ HTTP Error for bookings:', response.status, response.statusText);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          console.log('📞 Bookings raw data:', data);
+          
+          if (data.success) {
+            allBookings = data.bookings || [];
+            console.log('📊 All bookings data:', allBookings.map((b: any) => ({
+              service: b.service?.label,
+              carReg: b.car?.registration,
+              hasCar: !!b.car,
+              hasCarReg: !!b.car?.registration
+            })));
+            setBookings(allBookings);
+            console.log('✅ All bookings state set to:', allBookings.length, 'items');
+          } else {
+            console.error('❌ Failed to fetch bookings:', data.error);
+            console.log('❌ Full bookings response:', data);
+          }
+        } catch (fetchError) {
+          console.error('❌ Fetch error for bookings:', fetchError);
+          // Don't throw, just continue with empty bookings
         }
         
         // Enrich recent conversations with car data from allBookings by _id
@@ -741,25 +772,83 @@ const AdminMessages: React.FC = () => {
                         <div style={{ fontSize: '1.1rem', marginBottom: '12px', color: '#888' }}>
                           📭 No conversations yet
                         </div>
-                        <div style={{ fontSize: '0.9rem', color: '#666' }}>
+                        <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '15px' }}>
                           {loading ? 'Loading conversations...' : 'When customers send messages, they will appear here as recent conversations.'}
                         </div>
+                        
+                        {/* Debug Information */}
+                        <div style={{ 
+                          fontSize: '0.8rem', 
+                          color: '#666', 
+                          marginBottom: '15px', 
+                          textAlign: 'left', 
+                          background: '#1a1a1a', 
+                          padding: '12px', 
+                          borderRadius: '6px',
+                          border: '1px solid #444'
+                        }}>
+                          <strong>🔍 Debug Info:</strong><br/>
+                          • API Base: {API_BASE_URL}<br/>
+                          • Admin Status: {isAdmin ? '✅ Yes' : '❌ No'}<br/>
+                          • User Email: {currentUserEmail || 'Not set'}<br/>
+                          • Role: {localStorage.getItem('role') || 'Not set'}<br/>
+                          • Loading: {loading ? 'Yes' : 'No'}
+                        </div>
+                        
                         {!loading && (
-                          <button 
-                            onClick={fetchAllBookings}
-                            style={{
-                              background: '#ffd700',
-                              color: '#111',
-                              padding: '8px 16px',
-                              borderRadius: '6px',
-                              border: 'none',
-                              cursor: 'pointer',
-                              fontWeight: 600,
-                              marginTop: '12px'
-                            }}
-                          >
-                            🔄 Reload Data
-                          </button>
+                          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                            <button 
+                              onClick={fetchAllBookings}
+                              style={{
+                                background: '#ffd700',
+                                color: '#111',
+                                padding: '8px 16px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                              }}
+                            >
+                              🔄 Reload Data
+                            </button>
+                            <button 
+                              onClick={async () => {
+                                console.log('🧪 Testing API connectivity...');
+                                try {
+                                  // Test recent conversations API
+                                  console.log('🧪 Testing recent conversations API...');
+                                  const convResponse = await fetch(`${API_BASE_URL}/api/admin/recent-conversations`);
+                                  console.log('🧪 Recent conversations status:', convResponse.status);
+                                  const convData = await convResponse.json();
+                                  console.log('🧪 Recent conversations data:', convData);
+                                  
+                                  // Test bookings API
+                                  console.log('🧪 Testing bookings API...');
+                                  const bookResponse = await fetch(`${API_BASE_URL}/api/bookings`);
+                                  console.log('🧪 Bookings status:', bookResponse.status);
+                                  const bookData = await bookResponse.json();
+                                  console.log('🧪 Bookings data:', bookData);
+                                  
+                                  alert(`API Test Results:\n\nRecent Conversations: ${convResponse.status} - ${JSON.stringify(convData, null, 2)}\n\nBookings: ${bookResponse.status} - ${JSON.stringify(bookData, null, 2)}`);
+                                } catch (error) {
+                                  console.error('🧪 API test failed:', error);
+                                  const errorMessage = error instanceof Error ? error.message : String(error);
+                                  alert(`API Test Failed: ${errorMessage}`);
+                                }
+                              }}
+                              style={{
+                                background: '#ff6b6b',
+                                color: '#fff',
+                                padding: '8px 16px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                              }}
+                            >
+                              🧪 Test APIs
+                            </button>
+                          </div>
                         )}
                       </div>
                     ) : (

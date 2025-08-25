@@ -78,6 +78,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   const [userServicesLoading, setUserServicesLoading] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
+
   useEffect(() => {
     setIsAdmin(localStorage.getItem('role') === 'admin');
     fetch('https://workshop-backend-six.vercel.app/api/services')
@@ -393,6 +394,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     const interval = setInterval(fetchUnreadMessages, 30000);
     return () => clearInterval(interval);
   }, []);
+
+
 
   // Calculate dynamic quote summary
   const getLabourHours = () => {
@@ -1322,6 +1325,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
               </button>
 
             </div>
+
+
 
 
 
