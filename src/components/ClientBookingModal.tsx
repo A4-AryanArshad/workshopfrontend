@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
+import { API_BASE_URL } from '../config';
 
 interface ClientBookingModalProps {
   isOpen: boolean;
@@ -108,7 +109,7 @@ const ClientBookingModal: React.FC<ClientBookingModalProps> = ({ isOpen, onClose
 
       // Create the booking
       console.log('📤 Sending booking to backend...');
-      const bookingResponse = await fetch('https://workshop-backend-six.vercel.app/api/bookings', {
+      const bookingResponse = await fetch(`${API_BASE_URL}/api/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bookingData),

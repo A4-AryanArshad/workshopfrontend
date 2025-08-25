@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import { API_BASE_URL } from '../config';
 
 const PastServicesPage: React.FC = () => {
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
-
-  const API_BASE_URL = 'http://localhost:5001';
 
   // Auto-fetch services when page opens
   useEffect(() => {

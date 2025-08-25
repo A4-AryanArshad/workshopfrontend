@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import { API_BASE_URL } from '../config';
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -18,7 +19,7 @@ const ForgotPasswordPage: React.FC = () => {
       return;
     }
     try {
-      const res = await fetch('https://workshop-backend-six.vercel.app/api/forgot-password', {
+      const res = await fetch(`${API_BASE_URL}/api/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })

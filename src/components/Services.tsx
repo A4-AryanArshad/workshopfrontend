@@ -1,8 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
-import './Home.css';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import React, { useState, useEffect, useRef } from 'react';
+import Navbar from './Navbar';
+import Footer from './Footer';
 import ClientBookingModal from './ClientBookingModal';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { API_BASE_URL } from '../config';
 gsap.registerPlugin(ScrollTrigger);
 
 type ApiService = { _id: string; label: string; sub: string; price?: number; category?: string; description?: string };
@@ -68,7 +70,7 @@ const Services: React.FC = () => {
   const [selectedServiceForBooking, setSelectedServiceForBooking] = useState<typeof fallbackServiceData[0] | null>(null);
 
   useEffect(() => {
-    fetch('https://workshop-backend-six.vercel.app/api/services')
+    fetch(`${API_BASE_URL}/api/services`)
       .then(r => r.json())
       .then((list: ApiService[]) => {
         console.log('Fetched services:', list);

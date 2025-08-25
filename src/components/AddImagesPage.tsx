@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import { API_BASE_URL } from '../config';
 
 const AddImagesPage: React.FC = () => {
   const [carNumber, setCarNumber] = useState('');
@@ -11,8 +12,6 @@ const AddImagesPage: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<{ [key: string]: File[] }>({});
   const [serviceImages, setServiceImages] = useState<{ [key: string]: any[] }>({});
   const [descriptions, setDescriptions] = useState<{ [key: string]: string }>({});
-
-  const API_BASE_URL = 'http://localhost:5001';
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +50,7 @@ const AddImagesPage: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/upload-service-image`, {
+      const res = await fetch(`${API_BASE_URL}/api/upload-service-image`, {
         method: 'POST',
         body: formData,
       });

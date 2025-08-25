@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
-import { Link, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 interface BookingWithMessages {
   _id: string;
@@ -69,7 +70,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
   const fetchBookingsWithMessages = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`https://workshop-backend-six.vercel.app/api/user/${currentUserEmail}/bookings-with-messages`);
+              const response = await fetch(`${API_BASE_URL}/api/user/${currentUserEmail}/bookings-with-messages`);
       const data = await response.json();
       
       if (data.success) {
@@ -143,7 +144,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
     try {
       console.log('🧪 Testing mark as read for booking:', bookingId);
       
-      const response = await fetch(`https://workshop-backend-six.vercel.app/api/bookings/${bookingId}/messages/read`, {
+              const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/messages/read`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -178,7 +179,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
     try {
       console.log('🔍 Checking messages for booking:', bookingId);
       
-      const response = await fetch(`https://workshop-backend-six.vercel.app/api/test-messages/${bookingId}`);
+              const response = await fetch(`${API_BASE_URL}/api/test-messages/${bookingId}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -213,7 +214,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
       console.log('🖱️ Clicking on booking:', booking._id, 'Current unread count:', booking.unreadMessageCount);
       
       // Mark messages as read for this booking
-      const response = await fetch(`https://workshop-backend-six.vercel.app/api/bookings/${booking._id}/messages/read`, {
+              const response = await fetch(`${API_BASE_URL}/api/bookings/${booking._id}/messages/read`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

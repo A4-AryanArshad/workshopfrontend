@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import { API_BASE_URL } from '../config';
 
 const SignupLogo = () => (
   <div style={{ textAlign: 'center', marginBottom: 32 }}>
@@ -33,7 +34,7 @@ const SignupPage: React.FC = () => {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch('https://workshop-backend-six.vercel.app/signup', {
+             const res = await fetch(`${API_BASE_URL}/api/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password })

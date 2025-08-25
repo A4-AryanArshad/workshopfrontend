@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { useParams, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 interface Message {
   _id: string;
@@ -138,7 +139,7 @@ const BookingMessages: React.FC<BookingMessagesProps> = ({
   const fetchMessages = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`https://workshop-backend-six.vercel.app/api/bookings/${bookingId}/messages`);
+      const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/messages`);
       const data = await response.json();
       
       if (data.success) {
@@ -162,7 +163,7 @@ const BookingMessages: React.FC<BookingMessagesProps> = ({
 
   const markMessagesAsRead = async () => {
     try {
-              await fetch(`https://workshop-backend-six.vercel.app/api/bookings/${bookingId}/messages/read`, {
+              await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/messages/read`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userEmail: currentUserEmail })
@@ -201,7 +202,7 @@ const BookingMessages: React.FC<BookingMessagesProps> = ({
 
       console.log('📤 Sending message data:', messageData);
 
-      const response = await fetch(`https://workshop-backend-six.vercel.app/api/bookings/${bookingId}/messages`, {
+      const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(messageData)

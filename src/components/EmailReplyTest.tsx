@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import { API_BASE_URL } from '../config';
 
 const EmailReplyTest: React.FC = () => {
   const [bookingId, setBookingId] = useState('');
@@ -18,7 +19,7 @@ const EmailReplyTest: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('https://workshop-backend-six.vercel.app/api/test-email-reply', {
+      const response = await fetch(`${API_BASE_URL}/api/test-email-reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

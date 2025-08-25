@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import { API_BASE_URL } from '../config';
 
 function useQuery() {
-  return new URLSearchParams(useLocation().search);
+  return new URLSearchParams(useParams().search);
 }
 
 const ResetPasswordPage: React.FC = () => {
@@ -24,7 +25,7 @@ const ResetPasswordPage: React.FC = () => {
       return;
     }
     try {
-      const res = await fetch('https://workshop-backend-six.vercel.app/api/reset-password', {
+      const res = await fetch(`${API_BASE_URL}/api/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password })
