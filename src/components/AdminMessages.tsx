@@ -63,6 +63,8 @@ const AdminMessages: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [currentUserName, setCurrentUserName] = useState('');
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
+  const [lastTypingTime, setLastTypingTime] = useState(0);
   
   // Use useRef for interval and timeout management
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -165,7 +167,7 @@ const AdminMessages: React.FC = () => {
     }
   }, [currentUserEmail]);
 
-    // Set up auto-refresh for this booking only if enabled
+    // Set up auto-refresh for this booking only if enabled and user is not typing
     useEffect(() => {
       // Clear any existing interval first
       if (refreshIntervalRef.current) {
@@ -173,14 +175,15 @@ const AdminMessages: React.FC = () => {
         refreshIntervalRef.current = null;
       }
 
-      if (autoRefreshEnabled && selectedBooking) {
+      if (autoRefreshEnabled && selectedBooking && !isTyping) {
         refreshIntervalRef.current = setInterval(async () => {
-          if (selectedBooking && !messagesLoading) { // Only refresh if not already loading
+          // Don't refresh if user is typing or if already loading
+          if (selectedBooking && !messagesLoading && !isTyping) {
             await fetchMessages(selectedBooking._id);
             // Also refresh conversations to keep them updated
             await refreshConversations();
           }
-        }, 5000);
+        }, 15000); // Increased from 5 seconds to 15 seconds
       }
       
       return () => {
@@ -193,18 +196,18 @@ const AdminMessages: React.FC = () => {
           refreshTimeoutRef.current = null;
         }
       };
-    }, [autoRefreshEnabled, selectedBooking?._id]); // Only depend on the ID, not the entire object
+    }, [autoRefreshEnabled, selectedBooking?._id, isTyping]); // Added isTyping dependency
 
-    // Auto-refresh conversations every 10 seconds
+    // Auto-refresh conversations every 30 seconds (increased from 10 seconds)
     useEffect(() => {
       const conversationInterval = setInterval(async () => {
-        if (recentConversations.length > 0) {
+        if (recentConversations.length > 0 && !isTyping) {
           await refreshConversations();
         }
-      }, 10000);
+      }, 30000); // Increased from 10 seconds to 30 seconds
       
       return () => clearInterval(conversationInterval);
-    }, [recentConversations.length]);
+    }, [recentConversations.length, isTyping]); // Added isTyping dependency
 
     // Cleanup effect to prevent memory leaks and chat disappearance
     useEffect(() => {
@@ -638,6 +641,12 @@ const AdminMessages: React.FC = () => {
     return (
       <>
         <Navbar />
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
         <div id="ames"style={{ background: '#111', minHeight: '100vh', padding: '0' }}>
           <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 24px' }}>
             <div style={{ marginBottom: '32px' }}>
@@ -1102,14 +1111,64 @@ const AdminMessages: React.FC = () => {
                       borderRadius: '12px',
                       border: '1px solid #333'
                     }}>
-                      <h3 style={{ color: '#ffd700', marginBottom: '16px', fontSize: '1.1rem' }}>
+                      <h3 style={{ color: '#ffd600', marginBottom: '16px', fontSize: '1.1rem' }}>
                         Send Message to {selectedBooking.customer.name}
                       </h3>
+                      
+                      {/* Auto-refresh status indicator */}
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px', 
+                        marginBottom: '16px',
+                        fontSize: '0.85rem',
+                        color: '#bdbdbd'
+                      }}>
+                        <div style={{ 
+                          width: '8px', 
+                          height: '8px', 
+                          borderRadius: '50%', 
+                          background: isTyping ? '#ffd600' : '#00ff88',
+                          animation: isTyping ? 'pulse 1.5s infinite' : 'none'
+                        }} />
+                        <span>
+                          {isTyping ? 'Auto-refresh paused while typing...' : 'Auto-refresh active'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                          style={{
+                            background: 'none',
+                            border: '1px solid #444',
+                            borderRadius: '4px',
+                            padding: '4px 8px',
+                            fontSize: '0.8rem',
+                            color: autoRefreshEnabled ? '#00ff88' : '#ff6b6b',
+                            cursor: 'pointer',
+                            marginLeft: 'auto'
+                          }}
+                        >
+                          {autoRefreshEnabled ? 'Disable' : 'Enable'} Auto-refresh
+                        </button>
+                      </div>
                       
                       <form onSubmit={sendMessage}>
                         <textarea
                           value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
+                          onChange={(e) => {
+                            setNewMessage(e.target.value);
+                            // Set typing state to pause auto-refresh
+                            setIsTyping(true);
+                            setLastTypingTime(Date.now());
+                            
+                            // Clear typing state after 2 seconds of no typing
+                            setTimeout(() => {
+                              if (Date.now() - lastTypingTime > 2000) {
+                                setIsTyping(false);
+                              }
+                            }, 2000);
+                          }}
+                          onBlur={() => setIsTyping(false)}
                           placeholder="Type your message here..."
                           style={{
                             width: '100%',
