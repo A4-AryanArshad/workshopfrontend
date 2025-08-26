@@ -12,6 +12,8 @@ interface ClientBookingModalProps {
     price: string;
     duration: string;
     details: string;
+    labourHours?: number;
+    labourCost?: number;
   } | null;
 }
 
@@ -88,12 +90,12 @@ const ClientBookingModal: React.FC<ClientBookingModalProps> = ({ isOpen, onClose
           price: parseFloat(selectedService.price.replace('£', '')),
         },
         parts: [],
-        labourHours: parseFloat(selectedService.duration.split(' ')[0]),
-        labourCost: 0,
+        labourHours: selectedService.labourHours || 0,
+        labourCost: selectedService.labourCost || 0,
         partsCost: 0,
-        subtotal: parseFloat(selectedService.price.replace('£', '')),
-        vat: parseFloat(selectedService.price.replace('£', '')) * 0.2,
-        total: parseFloat(selectedService.price.replace('£', '')) * 1.2,
+        subtotal: parseFloat(selectedService.price.replace('£', '')) + (selectedService.labourHours || 0) * (selectedService.labourCost || 0),
+        vat: (parseFloat(selectedService.price.replace('£', '')) + (selectedService.labourHours || 0) * (selectedService.labourCost || 0)) * 0.2,
+        total: (parseFloat(selectedService.price.replace('£', '')) + (selectedService.labourHours || 0) * (selectedService.labourCost || 0)) * 1.2,
         date: formData.preferredDate,
         time: formData.preferredTime, // This ensures time is saved
         category: selectedService.category.toLowerCase() === 'tyres' ? 'tyres' : 

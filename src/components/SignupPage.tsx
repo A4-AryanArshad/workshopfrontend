@@ -8,7 +8,7 @@ const SignupLogo = () => (
   <div style={{ textAlign: 'center', marginBottom: 32 }}>
     <img 
       id="imager11" 
-      src="./nlogo.png" 
+      src="/nlogo.png" 
       alt="Reliable Mechanics Logo"
     />
   </div>
@@ -34,7 +34,7 @@ const SignupPage: React.FC = () => {
     setError('');
     setSuccess('');
     try {
-             const res = await fetch(`${API_BASE_URL}/api/signup`, {
+             const res = await fetch(`${API_BASE_URL}/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password })

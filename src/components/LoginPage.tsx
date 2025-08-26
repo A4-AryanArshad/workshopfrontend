@@ -8,7 +8,7 @@ const LoginLogo = () => (
   <div style={{ textAlign: 'center', marginBottom: 32 }}>
     <img 
       id="imager11" 
-      src="./nlogo.png" 
+      src="/nlogo.png" 
       alt="Reliable Mechanics Logo"
     />
   </div>
@@ -40,7 +40,7 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/login`, {
+      const res = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -53,7 +53,7 @@ const LoginPage: React.FC = () => {
       
       // For admin users, always store the correct admin email
       if (data.role === 'admin') {
-        localStorage.setItem('userEmail', 'admin1234@gmail.com'); // Use correct admin email
+        localStorage.setItem('userEmail', 'j2mechanicslondon@gmail.com'); // Use correct admin email
       } else {
         localStorage.setItem('userEmail', email); // Store user email for regular users
       }

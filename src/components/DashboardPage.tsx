@@ -87,6 +87,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       .then((list: ServiceItem[]) => {
         if (Array.isArray(list)) {
           setServiceOptions(list);
+          // Reset selectedService to 0 when services are loaded to ensure proper initialization
+          setSelectedService(0);
+          console.log('🔧 Services loaded:', list.length, 'services');
+          console.log('🔧 Sample service with labour costs:', list.find(s => s.labourCost && s.labourCost > 0));
         } else {
           console.error('Services API returned non-array:', list);
           setServiceOptions([]);
@@ -107,6 +111,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
           console.log('🔧 Services refreshed:', list.length, 'services loaded');
           console.log('🔧 Sample service with labour costs:', list.find(s => s.labourCost && s.labourCost > 0));
           setServiceOptions(list);
+          // Reset selectedService to 0 when services are refreshed
+          setSelectedService(0);
         } else {
           console.error('Services API returned non-array:', list);
           setServiceOptions([]);
@@ -410,7 +416,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
 
   // Calculate dynamic quote summary
   const getLabourHours = () => {
-    if (!Array.isArray(serviceOptions)) return 2; // default 2h if serviceOptions is not an array
+    if (!Array.isArray(serviceOptions) || serviceOptions.length === 0) return 2; // default 2h if no services loaded
+    if (selectedService >= serviceOptions.length) return 2; // default 2h if invalid selection
+    
     const candidate = selectedService < serviceOptions.length
       ? serviceOptions[selectedService]?.sub
       : customServices[selectedService - serviceOptions.length]?.sub;
@@ -420,23 +428,30 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   };
   
   const getLabourCostPerHour = () => {
-    if (!Array.isArray(serviceOptions)) return 0; // return 0 if serviceOptions is not an array
+    if (!Array.isArray(serviceOptions) || serviceOptions.length === 0) return 10; // default £10/hour if no services loaded
+    if (selectedService >= serviceOptions.length) return 10; // default £10/hour if invalid selection
+    
     const candidate = selectedService < serviceOptions.length
       ? serviceOptions[selectedService]?.labourCost
       : customServices[selectedService - serviceOptions.length]?.labourCost;
     console.log('🔧 getLabourCostPerHour - selectedService:', selectedService, 'serviceOptions.length:', serviceOptions.length);
     console.log('🔧 getLabourCostPerHour - candidate:', candidate, 'type:', typeof candidate);
     console.log('🔧 Available services with labour costs:', serviceOptions.map(s => ({ label: s.label, labourHours: s.labourHours, labourCost: s.labourCost })));
-    return typeof candidate === 'number' ? candidate : 0;
+    
+    // Return the labour cost if it's a valid number, otherwise default to £10/hour
+    return typeof candidate === 'number' && candidate > 0 ? candidate : 10;
   };
   
   const labourHours = getLabourHours();
   const labourCostPerHour = getLabourCostPerHour();
   const labourCost = labourHours * labourCostPerHour;
   console.log('🔧 Labour calculation - hours:', labourHours, 'cost per hour:', labourCostPerHour, 'total cost:', labourCost);
+  
   const partsCost = parts.reduce((sum, p) => sum + (parseFloat(p.price || 0) * (p.qty || 1)), 0);
   const getServicePrice = () => {
-    if (!Array.isArray(serviceOptions)) return 0; // return 0 if serviceOptions is not an array
+    if (!Array.isArray(serviceOptions) || serviceOptions.length === 0) return 0; // return 0 if no services loaded
+    if (selectedService >= serviceOptions.length) return 0; // return 0 if invalid selection
+    
     const candidate = selectedService < serviceOptions.length
       ? serviceOptions[selectedService]?.price
       : (customServices[selectedService - serviceOptions.length]?.price as any);
@@ -567,6 +582,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
 
   // Lookup modal: dynamic quote summary calculations
   const getLookupLabourHours = () => {
+    if (!Array.isArray(serviceOptions) || serviceOptions.length === 0) return 2; // default 2h if no services loaded
+    if (lookupSelectedService >= serviceOptions.length) return 2; // default 2h if invalid selection
+    
     const candidate = lookupSelectedService < serviceOptions.length
       ? serviceOptions[lookupSelectedService]?.sub
       : lookupCustomServices[lookupSelectedService - serviceOptions.length]?.sub;
@@ -581,20 +599,29 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   };
 
   const getLookupLabourCostPerHour = () => {
+    if (!Array.isArray(serviceOptions) || serviceOptions.length === 0) return 10; // default £10/hour if no services loaded
+    if (lookupSelectedService >= serviceOptions.length) return 10; // default £10/hour if invalid selection
+    
     const candidate = lookupSelectedService < serviceOptions.length
       ? serviceOptions[lookupSelectedService]?.labourCost
       : lookupCustomServices[lookupSelectedService - serviceOptions.length]?.labourCost;
     console.log('🔧 getLookupLabourCostPerHour - lookupSelectedService:', lookupSelectedService, 'serviceOptions.length:', serviceOptions.length);
     console.log('🔧 getLookupLabourCostPerHour - candidate:', candidate, 'type:', typeof candidate);
-    return typeof candidate === 'number' ? candidate : 0;
+    
+    // Return the labour cost if it's a valid number, otherwise default to £10/hour
+    return typeof candidate === 'number' && candidate > 0 ? candidate : 10;
   };
   
   const lookupLabourHours = getLookupLabourHours();
   const lookupLabourCostPerHour = getLookupLabourCostPerHour();
   const lookupLabourCost = lookupLabourHours * lookupLabourCostPerHour;
   console.log('🔧 Lookup Labour calculation - hours:', lookupLabourHours, 'cost per hour:', lookupLabourCostPerHour, 'total cost:', lookupLabourCost);
+  
   const lookupPartsCost = lookupParts.reduce((sum, p) => sum + (parseFloat(p.price || 0) * (p.qty || 1)), 0);
   const getLookupServicePrice = () => {
+    if (!Array.isArray(serviceOptions) || serviceOptions.length === 0) return 0; // return 0 if no services loaded
+    if (lookupSelectedService >= serviceOptions.length) return 0; // return 0 if invalid selection
+    
     const candidate = lookupSelectedService < serviceOptions.length
       ? serviceOptions[lookupSelectedService]?.price
       : (lookupCustomServices[lookupSelectedService - serviceOptions.length]?.price as any);
@@ -940,10 +967,20 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   const handleCreateService = async () => {
     if (newService.label && newService.sub) {
       try {
+        const serviceData = {
+          label: newService.label,
+          sub: newService.sub,
+          price: parseFloat(newService.price) || 0,
+          category: (newService.sub.split(' - ')[1] || '').trim() || 'Maintenance',
+          description: newService.description,
+          labourHours: parseFloat(newService.labourHours) || 0,
+          labourCost: parseFloat(newService.labourCost) || 0
+        };
+        
         await fetch(`${API_BASE_URL}/api/services`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newService),
+          body: JSON.stringify(serviceData),
         });
         // Refresh services
         fetch(`${API_BASE_URL}/api/services`)
@@ -972,21 +1009,33 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
           labourCost: parseFloat(lookupNewService.labourCost) || 0
         };
         
-        await fetch(`${API_BASE_URL}/api/services`, {
+        const response = await fetch(`${API_BASE_URL}/api/services`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(serviceData),
         });
         
-        // Add to lookup custom services
-        setLookupCustomServices(prev => [...prev, serviceData]);
-        
-        // Reset form
-                              setLookupNewService({ label: '', sub: '', price: '', category: 'Maintenance', description: '', labourHours: '', labourCost: '' });
-        setShowLookupAddService(false);
-        
-        // Select the newly created service
-        setLookupSelectedService(serviceOptions.length + lookupCustomServices.length);
+        if (response.ok) {
+          const savedService = await response.json();
+          
+          // Add to lookup custom services
+          setLookupCustomServices(prev => [...prev, savedService]);
+          
+          // Also refresh the main service options to include the new service
+          fetch(`${API_BASE_URL}/api/services`)
+            .then(r => r.json())
+            .then((list: ServiceItem[]) => setServiceOptions(list))
+            .catch(() => setServiceOptions([]));
+          
+          // Reset form
+          setLookupNewService({ label: '', sub: '', price: '', category: 'Maintenance', description: '', labourHours: '', labourCost: '' });
+          setShowLookupAddService(false);
+          
+          // Select the newly created service
+          setLookupSelectedService(serviceOptions.length + lookupCustomServices.length);
+        } else {
+          throw new Error('Failed to create service');
+        }
       } catch (e) {
         alert('Failed to create service');
       }
@@ -2272,8 +2321,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                             <div style={{ color: '#fff', fontWeight: '500' }}>{service.labourHours || 0}</div>
                           </div>
                           <div>
-                            <span style={{ color: '#bdbdbd', fontSize: '0.8rem' }}>Labour Cost:</span>
+                            <span style={{ color: '#bdbdbd', fontSize: '0.8rem' }}>Labour Cost per Hour:</span>
                             <div style={{ color: '#fff', fontWeight: '500' }}>£{service.labourCost || 0}</div>
+                          </div>
+                          <div>
+                            <span style={{ color: '#bdbdbd', fontSize: '0.8rem' }}>Total Labour Cost:</span>
+                            <div style={{ color: '#ffd600', fontWeight: '600' }}>
+                              £{((service.labourHours || 0) * (service.labourCost || 0)).toFixed(2)}
+                            </div>
                           </div>
                           <div>
                             <span style={{ color: '#bdbdbd', fontSize: '0.8rem' }}>Parts Cost:</span>
@@ -2386,7 +2441,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                   required
                   value={lookupCustomer.phone} 
                   onChange={e => setLookupCustomer(c => ({ ...c, phone: e.target.value }))} 
-                  style={{ width: '100%', background: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem', marginBottom: 8 }} 
+                  style={{ width: '100%', background: '#111', color: '#eaeaea', border: '1.5px solid #232323', borderRadius: 8, padding: '10px 14px', fontSize: '1rem', marginBottom: 8 }} 
                 />
               </div>
               <div style={{ flex: 1 }}>
@@ -2640,10 +2695,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                 >
                   <span>{s.label}</span>
                   <span style={{ fontWeight: 400, fontSize: '1.02rem', color: lookupSelectedService === serviceOptions.length + i ? '#111' : '#bdbdbd' }}>{s.sub}</span>
+                  {typeof s.price === 'number' && s.price > 0 && (
+                    <span style={{ marginTop: 6, fontWeight: 700, color: lookupSelectedService === serviceOptions.length + i ? '#111' : '#ffd600' }}>£{s.price.toFixed(2)}</span>
+                  )}
+                  {typeof s.labourHours === 'number' && s.labourHours > 0 && typeof s.labourCost === 'number' && s.labourCost > 0 && (
+                    <span style={{ marginTop: 4, fontWeight: 500, fontSize: '0.9rem', color: lookupSelectedService === serviceOptions.length + i ? '#111' : '#bdbdbd' }}>
+                      Labour: {s.labourHours}h × £{s.labourCost}/h = £{(s.labourHours * s.labourCost).toFixed(2)}
+                    </span>
+                  )}
                     <span style={{ 
                       position: 'absolute', 
                       top: 8, 
-                      right: 8, 
+                      left: 8, 
                       background: categoryColor, 
                       color: '#111', 
                       padding: '2px 8px', 
@@ -2654,6 +2717,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                     }}>
                       {adminCategory}
                     </span>
+                  {isAdmin && (
+                    <div style={{ position: 'absolute', right: 10, top: 10, display: 'flex', gap: 8 }}>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); openEditService(s, serviceOptions.length + i); }} style={{ background: '#232323', color: '#fff', border: '1px solid #444', borderRadius: 8, padding: '6px 10px', cursor: 'pointer' }}>Edit</button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteService(s, serviceOptions.length + i); }} style={{ background: '#a33', color: '#fff', border: '1px solid #733', borderRadius: '50%', width: 28, height: 28, cursor: 'pointer' }}>×</button>
+                    </div>
+                  )}
                 </button>
                 );
               })}

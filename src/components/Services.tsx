@@ -7,7 +7,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { API_BASE_URL } from '../config';
 gsap.registerPlugin(ScrollTrigger);
 
-type ApiService = { _id: string; label: string; sub: string; price?: number; category?: string; description?: string };
+type ApiService = { _id: string; label: string; sub: string; price?: number; category?: string; description?: string; labourHours?: number; labourCost?: number };
 
 const fallbackServiceData = [
   {
@@ -17,6 +17,9 @@ const fallbackServiceData = [
     price: '£199',
     duration: '3-4 hours',
     details: 'Comprehensive service including oil change, all fluid checks and top-ups, brake inspection, air filter replacement, and full vehicle health check with diagnostic scan.',
+    labourHours: 3,
+    labourCost: 10,
+    originalService: null,
   },
   {
     id: 2,
@@ -25,6 +28,9 @@ const fallbackServiceData = [
     price: '£99',
     duration: '1-2 hours',
     details: 'Basic service including oil and filter change, fluid top-ups, and essential safety checks.',
+    labourHours: 1.5,
+    labourCost: 10,
+    originalService: null,
   },
   {
     id: 3,
@@ -33,6 +39,9 @@ const fallbackServiceData = [
     price: '£60',
     duration: '1 hour',
     details: 'Full vehicle diagnostics scan to identify issues and error codes.',
+    labourHours: 1,
+    labourCost: 10,
+    originalService: null,
   },
   {
     id: 4,
@@ -41,6 +50,9 @@ const fallbackServiceData = [
     price: '£150',
     duration: '2-3 hours',
     details: 'Replacement of brake pads and discs, including safety checks.',
+    labourHours: 2.5,
+    labourCost: 10,
+    originalService: null,
   },
   {
     id: 5,
@@ -49,6 +61,9 @@ const fallbackServiceData = [
     price: '£45',
     duration: '1 hour',
     details: 'Tyre removal and fitting, balancing, and safety inspection.',
+    labourHours: 1,
+    labourCost: 10,
+    originalService: null,
   },
   {
     id: 6,
@@ -57,6 +72,9 @@ const fallbackServiceData = [
     price: '£120',
     duration: '2 hours',
     details: 'Pre-MOT inspection and preparation to help your vehicle pass the MOT test.',
+    labourHours: 2,
+    labourCost: 10,
+    originalService: null,
   },
 ];
 
@@ -92,6 +110,9 @@ const Services: React.FC = () => {
             price: s.price ? `£${Number(s.price).toFixed(0)}` : '£0',
             duration: duration,
             details: s.description || '',
+            labourHours: s.labourHours || 0,
+            labourCost: s.labourCost || 0,
+            originalService: s // Keep reference to original service data
           };
         });
         console.log('Mapped services:', mapped);
