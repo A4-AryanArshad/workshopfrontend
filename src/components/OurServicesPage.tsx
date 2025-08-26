@@ -69,8 +69,18 @@ const OurServicesPage: React.FC = () => {
     .filter(s => s.title.toLowerCase().includes(search.toLowerCase()));
 
   const handleClientBooking = (service: typeof serviceData[0]) => {
-    setSelectedServiceForBooking(service);
-    setIsClientBookingOpen(true);
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    const userEmail = localStorage.getItem('userEmail');
+    
+    if (token && userEmail) {
+      // User is logged in, open the booking modal
+      setSelectedServiceForBooking(service);
+      setIsClientBookingOpen(true);
+    } else {
+      // User is not logged in, redirect to login page with return URL
+      window.location.href = '/login?redirect=/our-services';
+    }
   };
 
   return (

@@ -126,8 +126,18 @@ const Services: React.FC = () => {
   const filtered = selected === 'All' ? serviceData : serviceData.filter(s => s.category === selected);
 
   const handleClientBooking = (service: typeof fallbackServiceData[0]) => {
-    setSelectedServiceForBooking(service);
-    setIsClientBookingOpen(true);
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    const userEmail = localStorage.getItem('userEmail');
+    
+    if (token && userEmail) {
+      // User is logged in, open the booking modal
+      setSelectedServiceForBooking(service);
+      setIsClientBookingOpen(true);
+    } else {
+      // User is not logged in, redirect to login page with return URL
+      window.location.href = '/login?redirect=/services';
+    }
   };
 
   // Animation refs
