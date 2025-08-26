@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
-import ClientBookingModal from './ClientBookingModal';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { API_BASE_URL } from '../config';
@@ -84,8 +83,6 @@ const Services: React.FC = () => {
   const [selected, setSelected] = useState('All');
   const [expanded, setExpanded] = useState<number | null>(null);
   const [serviceData, setServiceData] = useState<typeof fallbackServiceData>(fallbackServiceData);
-  const [isClientBookingOpen, setIsClientBookingOpen] = useState(false);
-  const [selectedServiceForBooking, setSelectedServiceForBooking] = useState<typeof fallbackServiceData[0] | null>(null);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/services`)
@@ -131,12 +128,11 @@ const Services: React.FC = () => {
     const userEmail = localStorage.getItem('userEmail');
     
     if (token && userEmail) {
-      // User is logged in, open the booking modal
-      setSelectedServiceForBooking(service);
-      setIsClientBookingOpen(true);
+      // User is logged in, redirect to user dashboard
+      window.location.href = 'https://workshopfrontend-one.vercel.app/user-dashboard';
     } else {
-      // User is not logged in, redirect to login page with return URL
-      window.location.href = '/login?redirect=/services';
+      // User is not logged in, redirect to login page
+      window.location.href = 'https://workshopfrontend-one.vercel.app/login';
     }
   };
 
@@ -256,15 +252,6 @@ const Services: React.FC = () => {
         )}
       </div>
 
-      {/* Client Booking Modal */}
-      <ClientBookingModal
-        isOpen={isClientBookingOpen}
-        onClose={() => {
-          setIsClientBookingOpen(false);
-          setSelectedServiceForBooking(null);
-        }}
-        selectedService={selectedServiceForBooking}
-      />
     </section>
   );
 };

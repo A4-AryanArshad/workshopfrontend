@@ -69,17 +69,7 @@ const LoginPage: React.FC = () => {
           navigate('/dashboard');
         }
       } else {
-        // Check if there's a redirect URL in the query parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirectTo = urlParams.get('redirect');
-        
-        if (redirectTo) {
-          // Redirect to the specified page
-          navigate(redirectTo);
-        } else {
-          // Default redirect to user dashboard
-          navigate('/user-dashboard');
-        }
+        navigate('/user-dashboard'); // Redirect regular users to user dashboard
       }
     } catch (err: any) {
       setError(err.message);
