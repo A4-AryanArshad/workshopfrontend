@@ -5,6 +5,24 @@
   box-sizing: border-box;
 }
 
+/* Finance Page Styles */
+.finance-page {
+  /* margin-top removed */
+}
+
+/* Messages Page - Hide service letter icons on mobile */
+@media (max-width: 768px) {
+  .service-letter-icon {
+    display: none !important;
+  }
+  
+  /* Also hide any other circular service icons on mobile */
+  .service-circle-icon,
+  .service-initial-icon {
+    display: none !important;
+  }
+}
+
 .home {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.6;

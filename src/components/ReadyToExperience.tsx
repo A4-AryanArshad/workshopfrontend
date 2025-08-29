@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import './Home.css';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useNavigate } from 'react-router-dom';
 gsap.registerPlugin(ScrollTrigger);
 
 const features = [
@@ -26,11 +27,29 @@ const features = [
 ];
 
 const ReadyToExperience: React.FC = () => {
+  const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const descRef = useRef<HTMLParagraphElement>(null);
   const featuresRef = useRef<(HTMLDivElement | null)[]>([]);
   const actionsRef = useRef<HTMLDivElement>(null);
+
+  // Check if user is logged in
+  const isLoggedIn = () => {
+    return localStorage.getItem('token') !== null;
+  };
+
+  const handleBookService = () => {
+    if (isLoggedIn()) {
+      navigate('/user-dashboard');
+    } else {
+      navigate('/login');
+    }
+  };
+
+  const handleContactUs = () => {
+    navigate('/contact');
+  };
 
   useEffect(() => {
     if (sectionRef.current) {
@@ -69,8 +88,8 @@ const ReadyToExperience: React.FC = () => {
             ))}
           </div>
           <div className="ready-actions" ref={actionsRef}>
-            <button className="ready-book-btn">Book Your Service</button>
-            <button className="ready-contact-btn">Contact Us</button>
+            <button className="ready-book-btn" onClick={handleBookService}>Book Your Service</button>
+            <button className="ready-contact-btn" onClick={handleContactUs}>Contact Us</button>
           </div>
         </div>
       </div>

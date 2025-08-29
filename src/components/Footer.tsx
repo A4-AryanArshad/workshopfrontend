@@ -41,13 +41,13 @@ const Footer: React.FC = () => {
             Professional automotive services with a commitment to honesty, reliability, and exceptional results.
           </div>
           <div className="footer-socials">
-            <a href="#" aria-label="Instagram" className="footer-social">
-              <SocialIcon url="https://www.instagram.com" network="instagram" style={{ height: 32, width: 32 }} bgColor="#000" fgColor="#FFD600" />
+            <a href="https://www.tiktok.com/@j2mechanics" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="footer-social">
+              <SocialIcon url="https://www.tiktok.com/@j2mechanics" network="tiktok" style={{ height: 32, width: 32 }} bgColor="#000" fgColor="#FFD600" />
             </a>
-            <a href="#" aria-label="TikTok" className="footer-social">
-              <SocialIcon url="https://www.tiktok.com" network="tiktok" style={{ height: 32, width: 32 }} bgColor="#000" fgColor="#FFD600" />
+            <a href="https://www.facebook.com/people/J2-Mechanics/61579650955134" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="footer-social">
+              <SocialIcon url="https://www.facebook.com/people/J2-Mechanics/61579650955134" network="facebook" style={{ height: 32, width: 32 }} bgColor="#000" fgColor="#FFD600" />
             </a>
-            <a href="#" aria-label="Email" className="footer-social">
+            <a href="mailto:j2mechanicslondon@gmail.com" aria-label="Email" className="footer-social">
               <SocialIcon url="mailto:j2mechanicslondon@gmail.com" network="email" style={{ height: 32, width: 32 }} bgColor="#000" fgColor="#FFD600" />
             </a>
           </div>

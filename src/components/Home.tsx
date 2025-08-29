@@ -51,9 +51,14 @@ const Home: React.FC = () => {
           <h1 className="new-hero-title">Professional<br/>Automotive Services</h1>
           <div className="new-hero-buttons">
             <button className="new-book-btn large">
-              <Link to="/signup" style={{ color: 'inherit', textDecoration: 'none' }}>Book Your Service</Link>
+              <Link to="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Book Your Service</Link>
             </button>
-            <button className="new-view-btn large">View Our Services</button>
+            <button className="new-view-btn large" onClick={() => {
+              const servicesSection = document.getElementById('services');
+              if (servicesSection) {
+                servicesSection.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}>View Our Services</button>
           </div>
         </div>
         <div id="ilifter"className="scroll-indicator">Scroll to explore<br/><span className="scroll-mouse"></span></div>

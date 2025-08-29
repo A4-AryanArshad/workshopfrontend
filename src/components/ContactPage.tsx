@@ -296,9 +296,18 @@ const ContactPage: React.FC = () => {
               </div>
             </div>
           </div>
-          {/* Google Map Placeholder */}
-          <div style={{ background: '#181818', borderRadius: 16, minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bdbdbd', fontSize: '1.1rem', boxShadow: '0 4px 24px #0006', marginBottom: 48, width: '100%' }}>
-            Google Map Placeholder
+          {/* Google Map */}
+          <div style={{ background: '#181818', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px #0006', marginBottom: 48, width: '100%' }}>
+            <iframe 
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d79368.046792306!2d-0.19853366273448428!3d51.56362352093905!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x48761b1c5f1a9429%3A0x5ffdbed0f63cba58!2sCamden%20Town%2C%20London!5e0!3m2!1sen!2suk!4v1756385295009!5m2!1sen!2suk" 
+              width="100%" 
+              height="450" 
+              style={{ border: 0, display: 'block' }} 
+              allowFullScreen={true} 
+              loading="lazy" 
+              referrerPolicy="no-referrer-when-downgrade"
+              title="J2 Mechanics Location - Camden Town, London"
+            />
           </div>
         </div>
       </section>

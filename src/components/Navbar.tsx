@@ -90,6 +90,7 @@ const Navbar: React.FC = () => {
         <div className={`new-navbar-menu${menuOpen ? ' open' : ''}`}>
           <ul className="new-nav-menu">
             <li><Link to="/dashboard" onClick={() => setMenuOpen(false)}>Admin Dashboard</Link></li>
+            <li><Link to="/dashboard/finance" onClick={() => setMenuOpen(false)}>Finance</Link></li>
             <li><Link to="/dashboard/admin-messages" onClick={() => setMenuOpen(false)}>Messages</Link></li>
             <li><Link to="/dashboard/add-images" onClick={() => setMenuOpen(false)}>AddImages</Link></li>
             <li><button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>Logout</button></li>

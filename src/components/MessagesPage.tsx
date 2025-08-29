@@ -433,19 +433,21 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
                   gap: '12px'
                 }}
               >
-                <div style={{
-                  background: selectedService === service ? '#111' : '#ffd700',
-                  color: selectedService === service ? '#ffd700' : '#111',
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  flexShrink: 0
-                }}>
+                <div 
+                  className="service-letter-icon"
+                  style={{
+                    background: selectedService === service ? '#111' : '#ffd700',
+                    color: selectedService === service ? '#ffd700' : '#111',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    flexShrink: 0
+                  }}>
                   {service.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1 }}>

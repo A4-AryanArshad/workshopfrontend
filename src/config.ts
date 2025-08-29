@@ -1,7 +1,5 @@
 // API Configuration
-export const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://workshop-backend-six.vercel.app'
-  : 'http://localhost:5001'; // Use local backend for development
+export const API_BASE_URL = 'https://workshop-backend-six.vercel.app';
 
 // Environment Configuration
 export const NODE_ENV = process.env.NODE_ENV || 'development';

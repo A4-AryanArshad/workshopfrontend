@@ -3,6 +3,7 @@ import './Home.css';
 import ReadyToExperience from './ReadyToExperience';
 import Footer from './Footer';
 import Navbar from './Navbar';
+import ClientBookingModal from './ClientBookingModal';
 
 const serviceData = [
   {
@@ -61,22 +62,15 @@ const OurServicesPage: React.FC = () => {
   const [selected, setSelected] = useState('All');
   const [expanded, setExpanded] = useState<number | null>(null);
   const [search, setSearch] = useState('');
+  const [isClientBookingOpen, setIsClientBookingOpen] = useState(false);
+  const [selectedServiceForBooking, setSelectedServiceForBooking] = useState<typeof serviceData[0] | null>(null);
 
   const filtered = (selected === 'All' ? serviceData : serviceData.filter(s => s.category === selected))
     .filter(s => s.title.toLowerCase().includes(search.toLowerCase()));
 
   const handleClientBooking = (service: typeof serviceData[0]) => {
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    const userEmail = localStorage.getItem('userEmail');
-    
-    if (token && userEmail) {
-      // User is logged in, redirect to user dashboard
-      window.location.href = 'https://workshopfrontend-one.vercel.app/user-dashboard';
-    } else {
-      // User is not logged in, redirect to login page
-      window.location.href = 'https://workshopfrontend-one.vercel.app/login';
-    }
+    setSelectedServiceForBooking(service);
+    setIsClientBookingOpen(true);
   };
 
   return (
@@ -152,6 +146,15 @@ const OurServicesPage: React.FC = () => {
       <Footer />
       </div>
 
+      {/* Client Booking Modal */}
+      <ClientBookingModal
+        isOpen={isClientBookingOpen}
+        onClose={() => {
+          setIsClientBookingOpen(false);
+          setSelectedServiceForBooking(null);
+        }}
+        selectedService={selectedServiceForBooking}
+      />
     </>
   );
 };

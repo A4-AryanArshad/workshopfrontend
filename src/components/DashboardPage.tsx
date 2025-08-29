@@ -46,7 +46,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   const [showModal, setShowModal] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [selectedService, setSelectedService] = useState(0);
+  const [selectedServices, setSelectedServices] = useState<number[]>([]);
 
   const [parts, setParts] = useState<any[]>([]);
   const [serviceOptions, setServiceOptions] = useState<ServiceItem[]>([]);
@@ -87,8 +87,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       .then((list: ServiceItem[]) => {
         if (Array.isArray(list)) {
           setServiceOptions(list);
-          // Reset selectedService to 0 when services are loaded to ensure proper initialization
-          setSelectedService(0);
+              // Reset selectedServices when services are loaded to ensure proper initialization
+    setSelectedServices([]);
           console.log('🔧 Services loaded:', list.length, 'services');
           console.log('🔧 Sample service with labour costs:', list.find(s => s.labourCost && s.labourCost > 0));
         } else {
@@ -111,8 +111,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
           console.log('🔧 Services refreshed:', list.length, 'services loaded');
           console.log('🔧 Sample service with labour costs:', list.find(s => s.labourCost && s.labourCost > 0));
           setServiceOptions(list);
-          // Reset selectedService to 0 when services are refreshed
-          setSelectedService(0);
+                  // Reset selectedServices when services are refreshed
+        setSelectedServices([]);
         } else {
           console.error('Services API returned non-array:', list);
           setServiceOptions([]);
@@ -139,7 +139,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   const [lookupCustomer, setLookupCustomer] = useState({ name: '', email: '', phone: '', postcode: '', address: '' });
   const [lookupParts, setLookupParts] = useState<any[]>([]);
   const [lookupCustomServices, setLookupCustomServices] = useState<any[]>([]);
-  const [lookupSelectedService, setLookupSelectedService] = useState(0);
+  const [lookupSelectedServices, setLookupSelectedServices] = useState<number[]>([]);
   const [lookupManualTime, setLookupManualTime] = useState('09:00');
   const [lookupManualDate, setLookupManualDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [lookupLoadingState, setLookupLoadingState] = useState(false);
@@ -151,10 +151,26 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
 
 
   const handlePartFormChange = (field: string, value: string) => {
-    setPartForm(f => ({ 
-      ...f, 
-      [field]: field === 'qty' ? parseInt(value) || 1 : value 
-    }));
+    setPartForm(f => {
+      const updatedForm = { 
+        ...f, 
+        [field]: field === 'qty' ? parseInt(value) || 1 : value 
+      };
+      
+      // Auto-calculate price when cost or profit changes
+      if (field === 'cost' || field === 'profit') {
+        const cost = parseFloat(field === 'cost' ? value : updatedForm.cost);
+        const profit = parseFloat(field === 'profit' ? value : updatedForm.profit);
+        
+        if (!isNaN(cost) && !isNaN(profit) && cost > 0) {
+          // Calculate price: cost * (1 + profit/100)
+          const calculatedPrice = (cost * (1 + profit / 100)).toFixed(2);
+          updatedForm.price = calculatedPrice;
+        }
+      }
+      
+      return updatedForm;
+    });
   };
 
   const handleAddPart = async () => {
@@ -226,241 +242,83 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     setSelectedTime('');
   };
 
-  const handleCreateBooking = async () => {
-    if (!scheduleDate || !selectedTime) return;
-    
-    // Create the booking
-    const newBooking = {
-      date: dayjs(scheduleDate, 'DD/MM/YYYY').format('YYYY-MM-DD'),
-      time: selectedTime,
-      reg: 'KE14OYZ',
-      price: 324,
-      service: Array.isArray(serviceOptions) && serviceOptions[selectedService] ? serviceOptions[selectedService].label : 'Unknown Service',
-      duration: Array.isArray(serviceOptions) && serviceOptions[selectedService] ? serviceOptions[selectedService].sub : 'Unknown Duration',
-    };
-    
-    setBookings(b => [...b, newBooking]);
-    
-    // Deduct parts from inventory if any parts were added
-    if (parts.length > 0) {
-      console.log('🔍 SCHEDULED BOOKING - Starting parts deduction for:', parts.length, 'parts');
-      console.log('🔍 SCHEDULED BOOKING - Parts array contents:', JSON.stringify(parts, null, 2));
-      for (const part of parts) {
-        try {
-          console.log(`🔍 SCHEDULED BOOKING - Deducting part ${part.partNumber} (${part.name}) - Quantity: ${part.qty}`);
-          const deductResponse = await fetch(`${API_BASE_URL}/api/parts/${part.partNumber}/deduct`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ quantity: part.qty || 1 })
-          });
-          
-          if (!deductResponse.ok) {
-            const errorData = await deductResponse.json();
-            console.error(`❌ SCHEDULED BOOKING - Failed to deduct part ${part.name}:`, errorData.error);
-          } else {
-            console.log(`✅ SCHEDULED BOOKING - Successfully deducted ${part.qty} of part ${part.partNumber}`);
-          }
-        } catch (error) {
-          console.error(`❌ SCHEDULED BOOKING - Error deducting part ${part.name}:`, error);
-        }
-      }
-    }
-    
-    setShowScheduleModal(false);
-    setShowModal(false);
-    setShowManual(false);
-    setRegInput('');
-    setLookupResult(null);
-    setLookupError('');
-    setLookupLoading(false);
-    setSelectedTime('');
-    setScheduleDate('');
-    setSelectedService(0);
-    setParts([]);
-    setPartForm({ partNumber: '', name: '', supplier: '', cost: '', profit: '', price: '', qty: 1 });
-    setCustomServices([]);
-    setNewService({ label: '', sub: '', price: '', description: '', labourHours: '', labourCost: '' });
-    setShowAddService(false);
-    setShowAddPart(false);
-    setPartsTable([]);
-    setPartRow({ partNumber: '', name: '', supplier: '', cost: '', profit: '20', price: '', qty: '', booked: '' });
-  };
-
-  const bookingsForDate = Array.isArray(bookings) ? bookings.filter(b => {
-    console.log('🔍 Checking booking:', b);
-    console.log('🔍 Booking date:', b.date, 'type:', typeof b.date);
-    console.log('🔍 Dashboard date:', dashboardDate.format('YYYY-MM-DD'));
-    
-    // Handle both string and Date object formats
-    let bookingDateStr = '';
-    
-    if (b.date instanceof Date) {
-      bookingDateStr = b.date.toISOString().split('T')[0];
-    } else if (typeof b.date === 'string') {
-      // Handle ISO date strings like "2025-08-14T00:00:00.000Z"
-      if (b.date.includes('T')) {
-        bookingDateStr = b.date.split('T')[0];
-      } else {
-        bookingDateStr = b.date;
-      }
-    }
-    
-    const dashboardDateStr = dashboardDate.format('YYYY-MM-DD');
-    const match = bookingDateStr === dashboardDateStr;
-    
-    if (match) {
-      console.log('✅ Date match found:', bookingDateStr, 'for', dashboardDateStr);
-    } else {
-      console.log('❌ No date match:', bookingDateStr, 'vs', dashboardDateStr);
-    }
-    
-    return match;
-  }) : [];
-  
-  console.log('📅 Total bookings:', Array.isArray(bookings) ? bookings.length : 'bookings is not an array');
-  console.log('📅 Bookings for current date:', bookingsForDate.length);
-  console.log('📅 Current dashboard date:', dashboardDate.format('YYYY-MM-DD'));
-  console.log('📅 Today\'s date:', dayjs().format('YYYY-MM-DD'));
-  
-  // Debug: Show all bookings with their dates
-  if (Array.isArray(bookings)) {
-    bookings.forEach((b, index) => {
-      console.log(`📅 Booking ${index}:`, {
-        id: b._id,
-        date: b.date,
-        dateType: typeof b.date,
-        time: b.time,
-        category: b.category,
-        registration: b.car?.registration
-      });
-    });
-  }
-
-  const handleDVLAlookup = async () => {
-    setLookupLoading(true);
-    setLookupError('');
-    setLookupResult(null);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/dvla-lookup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ registrationNumber: regInput })
-      });
-      if (!response.ok) throw new Error('Vehicle not found or API error');
-      const data = await response.json();
-      setLookupResult(data);
-    } catch (err: any) {
-      setLookupError(err.message || 'Lookup failed');
-    } finally {
-      setLookupLoading(false);
-    }
-  };
-
-  // Fetch all bookings on mount
-  useEffect(() => {
-    console.log('🔍 DashboardPage useEffect - fetching bookings from:', `${API_BASE_URL}/api/bookings`);
-    setBookingsLoading(true);
-    fetch(`${API_BASE_URL}/api/bookings`)
-      .then(res => {
-        console.log('📅 Response status:', res.status);
-        console.log('📅 Response ok:', res.ok);
-        return res.json();
-      })
-      .then(data => {
-        console.log('📅 Fetched bookings data:', data);
-        console.log('📅 Current dashboard date:', dashboardDate.format('YYYY-MM-DD'));
-        if (data.success && Array.isArray(data.bookings)) {
-          console.log('📅 Data has success and bookings array:', data.bookings.length);
-          setBookings(data.bookings);
-        } else if (Array.isArray(data)) {
-          console.log('📅 Data is array, setting bookings:', data.length);
-          setBookings(data);
-        } else {
-          console.error('❌ Bookings API returned unexpected format:', data);
-          setBookings([]);
-        }
-      })
-      .catch((error) => {
-        console.error('❌ Failed to fetch bookings:', error);
-        setBookings([]);
-      })
-      .finally(() => {
-        console.log('📅 Setting bookingsLoading to false');
-        setBookingsLoading(false);
-      });
-  }, []);
-
-            // Fetch unread messages count
-          useEffect(() => {
-            const fetchUnreadMessages = async () => {
-              try {
-                const response = await fetch(`${API_BASE_URL}/api/admin/unread-messages`);
-        const data = await response.json();
-        if (data.success) {
-          setUnreadMessages(data.count);
-        }
-      } catch (error) {
-        console.error('Error fetching unread messages:', error);
-      }
-    };
-
-    fetchUnreadMessages();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchUnreadMessages, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-
-
-  // Calculate dynamic quote summary
+  // Calculate total labour hours for multiple services
   const getLabourHours = () => {
-    if (!Array.isArray(serviceOptions) || serviceOptions.length === 0) return 2; // default 2h if no services loaded
-    if (selectedService >= serviceOptions.length) return 2; // default 2h if invalid selection
+    if (selectedServices.length === 0) return 2; // default 2h if no services selected
     
-    const candidate = selectedService < serviceOptions.length
-      ? serviceOptions[selectedService]?.sub
-      : customServices[selectedService - serviceOptions.length]?.sub;
-    const sub = typeof candidate === 'string' ? candidate : '';
-    const match = sub.match(/([\d.]+)h/);
-    return match ? parseFloat(match[1]) : 2; // default 2h
+    return selectedServices.reduce((totalHours, serviceIndex) => {
+      let hours = 2; // default
+      
+      if (serviceIndex < serviceOptions.length) {
+        const candidate = serviceOptions[serviceIndex]?.sub;
+        if (candidate && typeof candidate === 'string') {
+          const match = candidate.match(/(\d+\.?\d*)\s*h/i);
+          if (match) hours = parseFloat(match[1]);
+        }
+      } else {
+        const customIndex = serviceIndex - serviceOptions.length;
+        const candidate = customServices[customIndex]?.sub;
+        if (candidate && typeof candidate === 'string') {
+          const match = candidate.match(/(\d+\.?\d*)\s*h/i);
+          if (match) hours = parseFloat(match[1]);
+        }
+      }
+      
+      return totalHours + hours;
+    }, 0);
   };
-  
+
+  // Calculate labour cost per hour (average of selected services)
   const getLabourCostPerHour = () => {
-    if (!Array.isArray(serviceOptions) || serviceOptions.length === 0) return 10; // default £10/hour if no services loaded
-    if (selectedService >= serviceOptions.length) return 10; // default £10/hour if invalid selection
+    if (selectedServices.length === 0) return 10; // default £10/hour if no services selected
     
-    const candidate = selectedService < serviceOptions.length
-      ? serviceOptions[selectedService]?.labourCost
-      : customServices[selectedService - serviceOptions.length]?.labourCost;
-    console.log('🔧 getLabourCostPerHour - selectedService:', selectedService, 'serviceOptions.length:', serviceOptions.length);
-    console.log('🔧 getLabourCostPerHour - candidate:', candidate, 'type:', typeof candidate);
-    console.log('🔧 Available services with labour costs:', serviceOptions.map(s => ({ label: s.label, labourHours: s.labourHours, labourCost: s.labourCost })));
+    const totalCost = selectedServices.reduce((total, serviceIndex) => {
+      let cost = 10; // default
+      
+      if (serviceIndex < serviceOptions.length) {
+        const candidate = serviceOptions[serviceIndex]?.labourCost;
+        if (typeof candidate === 'number' && candidate > 0) cost = candidate;
+      } else {
+        const customIndex = serviceIndex - serviceOptions.length;
+        const candidate = customServices[customIndex]?.labourCost;
+        if (typeof candidate === 'number' && candidate > 0) cost = candidate;
+      }
+      
+      return total + cost;
+    }, 0);
     
-    // Return the labour cost if it's a valid number, otherwise default to £10/hour
-    return typeof candidate === 'number' && candidate > 0 ? candidate : 10;
+    return totalCost / selectedServices.length; // average cost per hour
   };
-  
+
+  // Calculate total service price for multiple services
+  const getServicePrice = () => {
+    if (selectedServices.length === 0) return 0;
+    
+    return selectedServices.reduce((totalPrice, serviceIndex) => {
+      let price = 0;
+      
+      if (serviceIndex < serviceOptions.length) {
+        const candidate = serviceOptions[serviceIndex]?.price;
+        price = (typeof candidate === 'number' && candidate > 0) ? candidate : 0;
+      } else {
+        const customIndex = serviceIndex - serviceOptions.length;
+        const candidate = customServices[customIndex]?.price;
+        price = (typeof candidate === 'number' && candidate > 0) ? candidate : 0;
+      }
+      
+      return totalPrice + price;
+    }, 0);
+  };
+
   const labourHours = getLabourHours();
   const labourCostPerHour = getLabourCostPerHour();
   const labourCost = labourHours * labourCostPerHour;
   console.log('🔧 Labour calculation - hours:', labourHours, 'cost per hour:', labourCostPerHour, 'total cost:', labourCost);
   
   const partsCost = parts.reduce((sum, p) => sum + (parseFloat(p.price || 0) * (p.qty || 1)), 0);
-  const getServicePrice = () => {
-    if (!Array.isArray(serviceOptions) || serviceOptions.length === 0) return 0; // return 0 if no services loaded
-    if (selectedService >= serviceOptions.length) return 0; // return 0 if invalid selection
-    
-    const candidate = selectedService < serviceOptions.length
-      ? serviceOptions[selectedService]?.price
-      : (customServices[selectedService - serviceOptions.length]?.price as any);
-    const priceNum = typeof candidate === 'number' ? candidate : parseFloat(candidate || 0);
-    return isNaN(priceNum) ? 0 : priceNum;
-  };
   const servicePrice = getServicePrice();
   const subtotal = labourCost + partsCost + servicePrice;
-  const vat = subtotal * 0.2;
+  const vat = Math.round(subtotal * 0.2 * 100) / 100; // Round to nearest penny
   const total = subtotal + vat;
 
   // Category mapping system for admin dashboard
@@ -506,16 +364,72 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     return mapToAdminCategory(serviceObj);
   };
 
+  // Get all categories from multiple services
+  const getBookingCategories = (booking: any) => {
+    const categories = new Set();
+    
+    // Add category from single service (for backward compatibility)
+    if (booking.service) {
+      categories.add(mapToAdminCategory(booking.service));
+    }
+    
+    // Add categories from multiple services
+    if (booking.services && Array.isArray(booking.services)) {
+      booking.services.forEach((service: any) => {
+        categories.add(mapToAdminCategory(service));
+      });
+    }
+    
+    return Array.from(categories);
+  };
+
+  // Get formatted services list for display - filtered by category
+  const getServicesDisplayText = (booking: any, targetCategory: string) => {
+    const serviceNames = [];
+    
+    // Add services from services array that match the target category
+    if (booking.services && Array.isArray(booking.services)) {
+      booking.services.forEach((service: any) => {
+        if (service.label && mapToAdminCategory(service) === targetCategory) {
+          serviceNames.push(service.label);
+        }
+      });
+    }
+    
+    // Fallback to single service if no multiple services and it matches category
+    if (serviceNames.length === 0 && booking.service?.label && mapToAdminCategory(booking.service) === targetCategory) {
+      serviceNames.push(booking.service.label);
+    }
+    
+    return serviceNames.length > 0 ? serviceNames.join(', ') : 'Mixed Services';
+  };
+
   const handleManualBooking = async () => {
+    if (selectedServices.length === 0) {
+      alert('Please select at least one service');
+      return;
+    }
+
     setManualLoading(true);
-    const selected = selectedService < serviceOptions.length ? serviceOptions[selectedService] : customServices[selectedService - serviceOptions.length];
+    
+    // Get the first selected service for compatibility
+    const firstServiceIndex = selectedServices[0];
+    const selected = firstServiceIndex < serviceOptions.length 
+      ? serviceOptions[firstServiceIndex] 
+      : customServices[firstServiceIndex - serviceOptions.length];
+    
     const category = extractCategory(selected);
     const bookingData = {
       car: manualCar,
       customer: manualCustomer,
       service: selected,
+      services: selectedServices.map(index => 
+        index < serviceOptions.length 
+          ? serviceOptions[index] 
+          : customServices[index - serviceOptions.length]
+      ),
       parts,
-      labourHours,
+      labourHours: getLabourHours(),
       labourCost,
       partsCost,
       subtotal,
@@ -556,20 +470,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       }
       
       // Refresh bookings
-      const res = await fetch(`${API_BASE_URL}/api/bookings`);
-      const bookingsData = await res.json();
-      if (Array.isArray(bookingsData)) {
-        setBookings(bookingsData);
-      } else {
-        console.error('Bookings API returned non-array:', bookingsData);
-        setBookings([]);
-      }
+      await refreshBookings();
       setShowManual(false);
       // Reset manual form
       setManualCar({ make: '', model: '', year: '', registration: '' });
       setManualCustomer({ name: '', email: '', phone: '', postcode: '', address: '' });
       setParts([]);
-      setSelectedService(0);
+      setSelectedServices([]);
       setCustomServices([]);
       setManualTime('09:00');
       setManualDate(dayjs().format('YYYY-MM-DD'));
@@ -580,62 +487,88 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     }
   };
 
-  // Lookup modal: dynamic quote summary calculations
+  // LOOKUP FUNCTIONS - Similar to manual booking but for lookup modal
+  // Calculate total labour hours for multiple lookup services
   const getLookupLabourHours = () => {
-    if (!Array.isArray(serviceOptions) || serviceOptions.length === 0) return 2; // default 2h if no services loaded
-    if (lookupSelectedService >= serviceOptions.length) return 2; // default 2h if invalid selection
+    if (lookupSelectedServices.length === 0) return 2; // default 2h if no services selected
     
-    const candidate = lookupSelectedService < serviceOptions.length
-      ? serviceOptions[lookupSelectedService]?.sub
-      : lookupCustomServices[lookupSelectedService - serviceOptions.length]?.sub;
-    const sub = typeof candidate === 'string' ? candidate : '';
-    const match = sub.match(/([\d.]+)h/);
-    return match ? parseFloat(match[1]) : 2; // default 2h
+    return lookupSelectedServices.reduce((totalHours, serviceIndex) => {
+      let hours = 2; // default
+      
+      if (serviceIndex < serviceOptions.length) {
+        const candidate = serviceOptions[serviceIndex]?.sub;
+        if (candidate && typeof candidate === 'string') {
+          const match = candidate.match(/(\d+\.?\d*)\s*h/i);
+          if (match) hours = parseFloat(match[1]);
+        }
+      } else {
+        const customIndex = serviceIndex - serviceOptions.length;
+        const candidate = lookupCustomServices[customIndex]?.sub;
+        if (candidate && typeof candidate === 'string') {
+          const match = candidate.match(/(\d+\.?\d*)\s*h/i);
+          if (match) hours = parseFloat(match[1]);
+        }
+      }
+      
+      return totalHours + hours;
+    }, 0);
   };
 
-  // Extract category for lookup services
-  const extractLookupCategory = (serviceObj: any) => {
-    return mapToAdminCategory(serviceObj);
-  };
-
+  // Calculate lookup labour cost per hour (average of selected services)
   const getLookupLabourCostPerHour = () => {
-    if (!Array.isArray(serviceOptions) || serviceOptions.length === 0) return 10; // default £10/hour if no services loaded
-    if (lookupSelectedService >= serviceOptions.length) return 10; // default £10/hour if invalid selection
+    if (lookupSelectedServices.length === 0) return 10; // default £10/hour if no services selected
     
-    const candidate = lookupSelectedService < serviceOptions.length
-      ? serviceOptions[lookupSelectedService]?.labourCost
-      : lookupCustomServices[lookupSelectedService - serviceOptions.length]?.labourCost;
-    console.log('🔧 getLookupLabourCostPerHour - lookupSelectedService:', lookupSelectedService, 'serviceOptions.length:', serviceOptions.length);
-    console.log('🔧 getLookupLabourCostPerHour - candidate:', candidate, 'type:', typeof candidate);
+    const totalCost = lookupSelectedServices.reduce((total, serviceIndex) => {
+      let cost = 10; // default
+      
+      if (serviceIndex < serviceOptions.length) {
+        const candidate = serviceOptions[serviceIndex]?.labourCost;
+        if (typeof candidate === 'number' && candidate > 0) cost = candidate;
+      } else {
+        const customIndex = serviceIndex - serviceOptions.length;
+        const candidate = lookupCustomServices[customIndex]?.labourCost;
+        if (typeof candidate === 'number' && candidate > 0) cost = candidate;
+      }
+      
+      return total + cost;
+    }, 0);
     
-    // Return the labour cost if it's a valid number, otherwise default to £10/hour
-    return typeof candidate === 'number' && candidate > 0 ? candidate : 10;
+    return totalCost / lookupSelectedServices.length; // average cost per hour
   };
-  
-  const lookupLabourHours = getLookupLabourHours();
-  const lookupLabourCostPerHour = getLookupLabourCostPerHour();
-  const lookupLabourCost = lookupLabourHours * lookupLabourCostPerHour;
-  console.log('🔧 Lookup Labour calculation - hours:', lookupLabourHours, 'cost per hour:', lookupLabourCostPerHour, 'total cost:', lookupLabourCost);
-  
-  const lookupPartsCost = lookupParts.reduce((sum, p) => sum + (parseFloat(p.price || 0) * (p.qty || 1)), 0);
-  const getLookupServicePrice = () => {
-    if (!Array.isArray(serviceOptions) || serviceOptions.length === 0) return 0; // return 0 if no services loaded
-    if (lookupSelectedService >= serviceOptions.length) return 0; // return 0 if invalid selection
-    
-    const candidate = lookupSelectedService < serviceOptions.length
-      ? serviceOptions[lookupSelectedService]?.price
-      : (lookupCustomServices[lookupSelectedService - serviceOptions.length]?.price as any);
-    const priceNum = typeof candidate === 'number' ? candidate : parseFloat(candidate || 0);
-    return isNaN(priceNum) ? 0 : priceNum;
-  };
-  const lookupServicePrice = getLookupServicePrice();
-  const lookupSubtotal = lookupLabourCost + lookupPartsCost + lookupServicePrice;
-  const lookupVat = lookupSubtotal * 0.2;
-  const lookupTotal = lookupSubtotal + lookupVat;
-  // Calculate total parts cost (cost * qty) for lookup modal
-  const lookupPartsCostRaw = lookupParts.reduce((sum, p) => sum + (parseFloat(p.cost || 0) * (p.qty || 1)), 0);
 
-  // Lookup modal part handlers
+  // Calculate total lookup service price for multiple services
+  const getLookupServicePrice = () => {
+    if (lookupSelectedServices.length === 0) return 0;
+    
+    return lookupSelectedServices.reduce((totalPrice, serviceIndex) => {
+      let price = 0;
+      
+      if (serviceIndex < serviceOptions.length) {
+        const candidate = serviceOptions[serviceIndex]?.price;
+        price = (typeof candidate === 'number' && candidate > 0) ? candidate : 0;
+      } else {
+        const customIndex = serviceIndex - serviceOptions.length;
+        const candidate = lookupCustomServices[customIndex]?.price;
+        price = (typeof candidate === 'number' && candidate > 0) ? candidate : 0;
+      }
+      
+      return totalPrice + price;
+    }, 0);
+  };
+
+  // Lookup service toggle function for multiple selection
+  const toggleLookupService = (serviceIndex: number) => {
+    setLookupSelectedServices(prev => {
+      if (prev.includes(serviceIndex)) {
+        // Remove service if already selected
+        return prev.filter(index => index !== serviceIndex);
+      } else {
+        // Add service if not selected
+        return [...prev, serviceIndex];
+      }
+    });
+  };
+
   const handleLookupAddPart = async () => {
     if (!partForm.name || !partForm.partNumber) {
       alert('Please fill in Part Number and Name');
@@ -723,15 +656,29 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
   };
 
   const handleLookupBooking = async () => {
+    if (lookupSelectedServices.length === 0) {
+      alert('Please select at least one service');
+      return;
+    }
+
     setManualLoading(true);
-    const selected = lookupSelectedService < serviceOptions.length
-      ? serviceOptions[lookupSelectedService]
-      : lookupCustomServices[lookupSelectedService - serviceOptions.length];
+    
+    // Get the first selected service for compatibility
+    const firstServiceIndex = lookupSelectedServices[0];
+    const selected = firstServiceIndex < serviceOptions.length
+      ? serviceOptions[firstServiceIndex]
+      : lookupCustomServices[firstServiceIndex - serviceOptions.length];
+    
     const category = extractCategory(selected);
     const bookingData = {
       car: lookupCar,
       customer: lookupCustomer,
       service: selected,
+      services: lookupSelectedServices.map(index => 
+        index < serviceOptions.length 
+          ? serviceOptions[index] 
+          : lookupCustomServices[index - serviceOptions.length]
+      ),
       parts: lookupParts,
       labourHours: lookupLabourHours,
       labourCost: lookupLabourCost,
@@ -774,14 +721,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
       }
       
       // Refresh bookings
-      const res = await fetch(`${API_BASE_URL}/api/bookings`);
-      const bookingsData = await res.json();
-      if (Array.isArray(bookingsData)) {
-        setBookings(bookingsData);
-      } else {
-        console.error('Bookings API returned non-array:', bookingsData);
-        setBookings([]);
-      }
+      await refreshBookings();
       setShowLookupBookingModal(false);
       // Reset lookup form
       setLookupCar(null);
@@ -918,7 +858,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
               await fetch(`${API_BASE_URL}/api/services/${service._id}`, { method: 'DELETE' });
     }
     setServiceOptions(prev => prev.filter((_, i) => i !== index));
-    if (selectedService >= serviceOptions.length - 1) setSelectedService(0);
+         // Update selectedServices to remove any references to the removed service
+     setSelectedServices(prev => prev.filter(serviceIndex => serviceIndex !== index));
   };
 
   const [editServiceIdx, setEditServiceIdx] = useState<number | null>(null);
@@ -1032,7 +973,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
           setShowLookupAddService(false);
           
           // Select the newly created service
-          setLookupSelectedService(serviceOptions.length + lookupCustomServices.length);
+          setLookupSelectedServices(prev => [...prev, serviceOptions.length + lookupCustomServices.length]);
         } else {
           throw new Error('Failed to create service');
         }
@@ -1133,7 +1074,322 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
     }
   }, [showUserServicesModal]);
 
+  // Service toggle function for multiple selection
+  const toggleService = (serviceIndex: number) => {
+    setSelectedServices(prev => {
+      if (prev.includes(serviceIndex)) {
+        // Remove service if already selected
+        return prev.filter(index => index !== serviceIndex);
+      } else {
+        // Add service if not selected
+        return [...prev, serviceIndex];
+      }
+    });
+  };
 
+  const resetAllStates = () => {
+    setShowManual(false);
+    setShowModal(false);
+    // setError(''); // This state doesn't exist
+    // setLoading(false); // This state doesn't exist
+    setLookupError('');
+    setLookupLoading(false);
+    setSelectedTime('');
+    setScheduleDate('');
+    setSelectedServices([]);
+    setParts([]);
+    setPartForm({ partNumber: '', name: '', supplier: '', cost: '', profit: '', price: '', qty: 1 });
+    setCustomServices([]);
+    setNewService({ label: '', sub: '', price: '', description: '', labourHours: '', labourCost: '' });
+    setShowAddService(false);
+    setShowAddPart(false);
+    // setBookingMessage('Booking successful!'); // This state doesn't exist
+    setShowScheduleModal(false);
+  };
+
+  // Refresh bookings from server
+  const refreshBookings = async () => {
+    try {
+      console.log('🔄 Refreshing bookings...');
+      const res = await fetch(`${API_BASE_URL}/api/bookings`);
+      const data = await res.json();
+      console.log('🔄 Fetched fresh bookings:', data);
+      
+      if (data.success && Array.isArray(data.bookings)) {
+        setBookings(data.bookings);
+      } else if (Array.isArray(data)) {
+        setBookings(data);
+      } else {
+        console.error('❌ Unexpected bookings format:', data);
+      }
+    } catch (error) {
+      console.error('❌ Failed to refresh bookings:', error);
+    }
+  };
+
+  // Lookup modal part handlers
+  const handleAddNewPartToDatabase = async () => {
+    if (!partForm.name || !partForm.partNumber || !partForm.cost) {
+      alert('Please fill in Part Number, Name, and Cost');
+      return;
+    }
+    
+    try {
+      // Create new part object
+      const newPartData = {
+        partNumber: partForm.partNumber,
+        name: partForm.name,
+        supplier: partForm.supplier || '',
+        cost: parseFloat(partForm.cost) || 0,
+        profit: parseFloat(partForm.profit) || 20,
+        price: parseFloat(partForm.price) || 0,
+        qty: parseInt(partForm.qty.toString()) || 0
+      };
+      
+      console.log('🔧 Adding new part to database:', newPartData);
+      
+      // Send to backend API
+      const response = await fetch(`${API_BASE_URL}/api/parts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPartData)
+      });
+      
+      if (response.ok) {
+        const savedPart = await response.json();
+        console.log('✅ Part added successfully:', savedPart);
+        alert('Part added successfully!');
+        
+        // Refresh parts table
+        const partsResponse = await fetch(`${API_BASE_URL}/api/parts`);
+        const partsData = await partsResponse.json();
+        if (Array.isArray(partsData)) {
+          setPartsTable(partsData);
+        }
+        
+        // Clear form
+        setPartForm({ partNumber: '', name: '', supplier: '', cost: '', profit: '20', price: '', qty: 1 });
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Failed to add part:', errorData);
+        alert('Failed to add part: ' + (errorData.error || 'Unknown error'));
+      }
+    } catch (error: any) {
+      console.error('❌ Error adding part:', error);
+      alert('Error adding part: ' + error.message);
+    }
+  };
+
+  const handleCreateBooking = async () => {
+    if (selectedServices.length === 0) {
+      alert('Please select at least one service');
+      return;
+    }
+
+    // Get all selected services details
+    const selectedServiceDetails = selectedServices.map(serviceIndex => {
+      if (serviceIndex < serviceOptions.length) {
+        return serviceOptions[serviceIndex];
+      } else {
+        return customServices[serviceIndex - serviceOptions.length];
+      }
+    });
+
+    const newBooking = {
+      custName: 'Admin Created',
+      custPhone: '+44',
+      custEmail: 'admin@example.com',
+      date: dayjs(scheduleDate, 'DD/MM/YYYY').format('YYYY-MM-DD'),
+      time: selectedTime,
+      reg: 'KE14OYZ',
+      price: total,
+      services: selectedServiceDetails, // Array of selected services
+      service: selectedServiceDetails[0]?.label || 'Multiple Services', // First service for compatibility
+      duration: selectedServiceDetails.map(s => s.label).join(', '), // Combined service names
+    };
+    
+    setBookings(b => [...b, newBooking]);
+
+    // Deduct parts from inventory if any parts were added
+    if (parts.length > 0) {
+      console.log('🔍 SCHEDULED BOOKING - Starting parts deduction for:', parts.length, 'parts');
+      console.log('🔍 SCHEDULED BOOKING - Parts array contents:', JSON.stringify(parts, null, 2));
+      for (const part of parts) {
+        try {
+          console.log(`🔍 SCHEDULED BOOKING - Deducting part ${part.partNumber} (${part.name}) - Quantity: ${part.qty}`);
+          const deductResponse = await fetch(`${API_BASE_URL}/api/parts/${part.partNumber}/deduct`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quantity: part.qty || 1 })
+          });
+          
+          if (!deductResponse.ok) {
+            const errorData = await deductResponse.json();
+            console.error(`❌ SCHEDULED BOOKING - Failed to deduct part ${part.name}:`, errorData.error);
+          } else {
+            console.log(`✅ SCHEDULED BOOKING - Successfully deducted ${part.qty} of part ${part.partNumber}`);
+          }
+        } catch (error) {
+          console.error(`❌ SCHEDULED BOOKING - Error deducting part ${part.name}:`, error);
+        }
+      }
+    }
+    
+    setShowScheduleModal(false);
+    setShowModal(false);
+    setShowManual(false);
+    setRegInput('');
+    setLookupResult(null);
+    setLookupError('');
+    setLookupLoading(false);
+    setSelectedTime('');
+    setScheduleDate('');
+    setSelectedServices([]);
+    setParts([]);
+    setPartForm({ partNumber: '', name: '', supplier: '', cost: '', profit: '', price: '', qty: 1 });
+    setCustomServices([]);
+    setNewService({ label: '', sub: '', price: '', description: '', labourHours: '', labourCost: '' });
+    setShowAddService(false);
+    setShowAddPart(false);
+    setPartsTable([]);
+    setPartRow({ partNumber: '', name: '', supplier: '', cost: '', profit: '20', price: '', qty: '', booked: '' });
+  };
+
+  const bookingsForDate = Array.isArray(bookings) ? bookings.filter(b => {
+    console.log('🔍 Checking booking:', b);
+    console.log('🔍 Booking date:', b.date, 'type:', typeof b.date);
+    console.log('🔍 Dashboard date:', dashboardDate.format('YYYY-MM-DD'));
+    
+    // Handle both string and Date object formats
+    let bookingDateStr = '';
+    
+    if (b.date instanceof Date) {
+      bookingDateStr = b.date.toISOString().split('T')[0];
+    } else if (typeof b.date === 'string') {
+      // Handle ISO date strings like "2025-08-14T00:00:00.000Z"
+      if (b.date.includes('T')) {
+        bookingDateStr = b.date.split('T')[0];
+      } else {
+        bookingDateStr = b.date;
+      }
+    }
+    
+    const dashboardDateStr = dashboardDate.format('YYYY-MM-DD');
+    const match = bookingDateStr === dashboardDateStr;
+    
+    if (match) {
+      console.log('✅ Date match found:', bookingDateStr, 'for', dashboardDateStr);
+    } else {
+      console.log('❌ No date match:', bookingDateStr, 'vs', dashboardDateStr);
+    }
+    
+    return match;
+  }) : [];
+  
+  console.log('📅 Total bookings:', Array.isArray(bookings) ? bookings.length : 'bookings is not an array');
+  console.log('📅 Bookings for current date:', bookingsForDate.length);
+  console.log('📅 Current dashboard date:', dashboardDate.format('YYYY-MM-DD'));
+  console.log('📅 Today\'s date:', dayjs().format('YYYY-MM-DD'));
+  
+  // Debug: Show all bookings with their dates
+  if (Array.isArray(bookings)) {
+    bookings.forEach((b, index) => {
+      console.log(`📅 Booking ${index}:`, {
+        id: b._id,
+        date: b.date,
+        dateType: typeof b.date,
+        time: b.time,
+        category: b.category,
+        registration: b.car?.registration
+      });
+    });
+  }
+
+  const handleDVLAlookup = async () => {
+    setLookupLoading(true);
+    setLookupError('');
+    setLookupResult(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/dvla-lookup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ registrationNumber: regInput })
+      });
+      if (!response.ok) throw new Error('Vehicle not found or API error');
+      const data = await response.json();
+      setLookupResult(data);
+    } catch (err: any) {
+      setLookupError(err.message || 'Lookup failed');
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
+  // Fetch all bookings on mount
+  useEffect(() => {
+    console.log('🔍 DashboardPage useEffect - fetching bookings from:', `${API_BASE_URL}/api/bookings`);
+    setBookingsLoading(true);
+    fetch(`${API_BASE_URL}/api/bookings`)
+      .then(res => {
+        console.log('📅 Response status:', res.status);
+        console.log('📅 Response ok:', res.ok);
+        return res.json();
+      })
+      .then(data => {
+        console.log('📅 Fetched bookings data:', data);
+        console.log('📅 Current dashboard date:', dashboardDate.format('YYYY-MM-DD'));
+        if (data.success && Array.isArray(data.bookings)) {
+          console.log('📅 Data has success and bookings array:', data.bookings.length);
+          setBookings(data.bookings);
+        } else if (Array.isArray(data)) {
+          console.log('📅 Data is array, setting bookings:', data.length);
+          setBookings(data);
+        } else {
+          console.error('❌ Bookings API returned unexpected format:', data);
+          setBookings([]);
+        }
+      })
+      .catch((error) => {
+        console.error('❌ Failed to fetch bookings:', error);
+        setBookings([]);
+      })
+      .finally(() => {
+        console.log('📅 Setting bookingsLoading to false');
+        setBookingsLoading(false);
+      });
+  }, []);
+
+            // Fetch unread messages count
+          useEffect(() => {
+            const fetchUnreadMessages = async () => {
+              try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/unread-messages`);
+        const data = await response.json();
+        if (data.success) {
+          setUnreadMessages(data.count);
+        }
+      } catch (error) {
+        console.error('Error fetching unread messages:', error);
+      }
+    };
+
+    fetchUnreadMessages();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchUnreadMessages, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate lookup totals using multiple services
+  const lookupLabourHours = getLookupLabourHours();
+  const lookupLabourCostPerHour = getLookupLabourCostPerHour();
+  const lookupLabourCost = lookupLabourHours * lookupLabourCostPerHour;
+  const lookupPartsCost = lookupParts.reduce((sum, p) => sum + (parseFloat(p.price || 0) * (p.qty || 1)), 0);
+  const lookupServicePrice = getLookupServicePrice();
+  const lookupSubtotal = lookupLabourCost + lookupPartsCost + lookupServicePrice;
+  const lookupVat = Math.round(lookupSubtotal * 0.2 * 100) / 100; // Round to nearest penny
+  const lookupTotal = lookupSubtotal + lookupVat;
 
   return (
     <>
@@ -1370,6 +1626,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
               <button onClick={() => setShowModal(true)} style={{ background: '#ffd600', color: '#111', border: 'none', borderRadius: 8, padding: '10px 22px', fontWeight: 600, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><PlusIcon />New Booking</button>
               <button onClick={() => setShowPartsModal(true)} style={{ background: '#232323', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontWeight: 500, fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><BoxIcon />Parts Management</button>
               <button onClick={() => { setShowUserServicesModal(true); fetchUserServices(); }} style={{ background: '#232323', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontWeight: '500', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>📊 User Services</button>
+              <button onClick={() => window.location.href = '/dashboard/finance'} style={{ background: '#232323', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontWeight: '500', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>💰 Finance</button>
               <button onClick={() => window.location.href = '/dashboard/admin-messages'} style={{ background: '#232323', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontWeight: '500', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
                 💬 Admin Messages
                 {unreadMessages > 0 && (
@@ -1444,11 +1701,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                       <tr key={slot} style={{ borderTop: '1px solid #232323' }}>
                         <td style={{ padding: cellPad, color: '#bdbdbd', fontSize: timeFontSize, width: 80 }}>{slot}</td>
                         <td style={{ padding: cellPad, width: 80 }}>
-                          {/* Tyres column: show only bookings with category 'tyres' */}
-                          {bookingsForDate.filter(b => b.time === slot && (b.category || '').toLowerCase() === 'tyres').map((b, i) => (
+                          {/* Tyres column: show bookings that include tyres services */}
+                          {bookingsForDate.filter(b => b.time === slot && getBookingCategories(b).includes('tyres')).map((b, i) => (
                             <div key={i} className="dashboard-booking-card" style={{
-                              background: '#ffd600',
-                              color: '#111',
+                              background: '#ff6b6b',
+                              color: '#fff',
                               borderRadius: 10,
                               padding: '14px 18px',
                               fontWeight: 700,
@@ -1466,12 +1723,22 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                             }}>
                               <span style={{ fontWeight: 700, fontSize: '1.08rem', marginBottom: 2 }}>{b.car?.registration || 'N/A'}</span>
                               <span style={{ fontWeight: 500, fontSize: '1.01rem' }}>£{typeof b.total === 'number' ? b.total.toFixed(2) : (b.total ? Number(b.total).toFixed(2) : '0.00')}</span>
+                              <div style={{ 
+                                fontSize: '0.85rem', 
+                                marginTop: 6, 
+                                fontWeight: 400, 
+                                textAlign: 'center',
+                                opacity: 0.9,
+                                lineHeight: 1.2
+                              }}>
+                                {getServicesDisplayText(b, 'tyres')}
+                              </div>
                             </div>
                           ))}
                         </td>
                         <td style={{ padding: cellPad, width: 80 }}>
-                          {/* Services column: show only bookings with category 'service' */}
-                          {bookingsForDate.filter(b => b.time === slot && (b.category || '').toLowerCase() === 'service').map((b, i) => (
+                          {/* Services column: show bookings that include service category */}
+                          {bookingsForDate.filter(b => b.time === slot && getBookingCategories(b).includes('service')).map((b, i) => (
                             <div key={i} className="dashboard-booking-card" style={{
                               background: '#ffd600',
                               color: '#111',
@@ -1492,14 +1759,24 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                             }}>
                               <span style={{ fontWeight: 700, fontSize: '1.08rem', marginBottom: 2 }}>{b.car?.registration || 'N/A'}</span>
                               <span style={{ fontWeight: 500, fontSize: '1.01rem' }}>£{typeof b.total === 'number' ? b.total.toFixed(2) : (b.total ? Number(b.total).toFixed(2) : '0.00')}</span>
+                              <div style={{ 
+                                fontSize: '0.85rem', 
+                                marginTop: 6, 
+                                fontWeight: 400, 
+                                textAlign: 'center',
+                                opacity: 0.8,
+                                lineHeight: 1.2
+                              }}>
+                                {getServicesDisplayText(b, 'service')}
+                              </div>
                             </div>
                           ))}
                         </td>
                         <td style={{ padding: cellPad, width: 80 }}>
-                          {/* Mechanical column: show only bookings with category 'mechanical' */}
-                          {bookingsForDate.filter(b => b.time === slot && (b.category || '').toLowerCase() === 'mechanical').map((b, i) => (
+                          {/* Mechanical column: show bookings that include mechanical services */}
+                          {bookingsForDate.filter(b => b.time === slot && getBookingCategories(b).includes('mechanical')).map((b, i) => (
                             <div key={i} className="dashboard-booking-card" style={{
-                              background: '#ffd600',
+                              background: '#4ecdc4',
                               color: '#111',
                               borderRadius: 10,
                               padding: '14px 18px',
@@ -1518,6 +1795,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                             }}>
                               <span style={{ fontWeight: 700, fontSize: '1.08rem', marginBottom: 2 }}>{b.car?.registration || 'N/A'}</span>
                               <span style={{ fontWeight: 500, fontSize: '1.01rem' }}>£{typeof b.total === 'number' ? b.total.toFixed(2) : (b.total ? Number(b.total).toFixed(2) : '0.00')}</span>
+                              <div style={{ 
+                                fontSize: '0.85rem', 
+                                marginTop: 6, 
+                                fontWeight: 400, 
+                                textAlign: 'center',
+                                opacity: 0.8,
+                                lineHeight: 1.2
+                              }}>
+                                {getServicesDisplayText(b, 'mechanical')}
+                              </div>
                             </div>
                           ))}
                         </td>
@@ -1792,11 +2079,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                 <button
                   key={s.label}
                   type="button"
-                  onClick={() => setSelectedService(i)}
+                  onClick={() => toggleService(i)}
                   style={{
-                    background: selectedService === i ? '#ffd600' : '#181818',
-                    color: selectedService === i ? '#111' : '#fff',
-                    border: selectedService === i ? '2px solid #ffd600' : '2px solid #444',
+                    background: selectedServices.includes(i) ? '#ffd600' : '#181818',
+                    color: selectedServices.includes(i) ? '#111' : '#fff',
+                    border: selectedServices.includes(i) ? '2px solid #ffd600' : '2px solid #444',
                     borderRadius: 12,
                     padding: '32px 32px',
                     fontWeight: 600,
@@ -1814,12 +2101,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                   }}
                 >
                   <span>{s.label}</span>
-                  <span style={{ fontWeight: 400, fontSize: '1.02rem', color: selectedService === i ? '#111' : '#bdbdbd' }}>{s.sub}</span>
+                  <span style={{ fontWeight: 400, fontSize: '1.02rem', color: selectedServices.includes(i) ? '#111' : '#bdbdbd' }}>{s.sub}</span>
                   {typeof s.price === 'number' && s.price > 0 && (
-                    <span style={{ marginTop: 6, fontWeight: 700, color: selectedService === i ? '#111' : '#ffd600' }}>£{s.price.toFixed(2)}</span>
+                    <span style={{ marginTop: 6, fontWeight: 700, color: selectedServices.includes(i) ? '#111' : '#ffd600' }}>£{s.price.toFixed(2)}</span>
                   )}
                   {typeof s.labourHours === 'number' && s.labourHours > 0 && typeof s.labourCost === 'number' && s.labourCost > 0 && (
-                    <span style={{ marginTop: 4, fontWeight: 500, fontSize: '0.9rem', color: selectedService === i ? '#111' : '#bdbdbd' }}>
+                    <span style={{ marginTop: 4, fontWeight: 500, fontSize: '0.9rem', color: selectedServices.includes(i) ? '#111' : '#bdbdbd' }}>
                       Labour: {s.labourHours}h × £{s.labourCost}/h = £{(s.labourHours * s.labourCost).toFixed(2)}
                     </span>
                   )}
@@ -1853,11 +2140,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                 <button
                   key={s.label + s.sub + i}
                   type="button"
-                  onClick={() => setSelectedService(serviceOptions.length + i)}
+                  onClick={() => toggleService(serviceOptions.length + i)}
                   style={{
-                    background: selectedService === serviceOptions.length + i ? '#ffd600' : '#181818',
-                    color: selectedService === serviceOptions.length + i ? '#111' : '#fff',
-                    border: selectedService === serviceOptions.length + i ? '2px solid #ffd600' : '2px solid #444',
+                    background: selectedServices.includes(serviceOptions.length + i) ? '#ffd600' : '#181818',
+                    color: selectedServices.includes(serviceOptions.length + i) ? '#111' : '#fff',
+                    border: selectedServices.includes(serviceOptions.length + i) ? '2px solid #ffd600' : '2px solid #444',
                     borderRadius: 12,
                     padding: '32px 32px',
                     fontWeight: 600,
@@ -1875,12 +2162,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                   }}
                 >
                   <span>{s.label}</span>
-                  <span style={{ fontWeight: 400, fontSize: '1.02rem', color: selectedService === serviceOptions.length + i ? '#111' : '#bdbdbd' }}>{s.sub}</span>
+                  <span style={{ fontWeight: 400, fontSize: '1.02rem', color: selectedServices.includes(serviceOptions.length + i) ? '#111' : '#bdbdbd' }}>{s.sub}</span>
                   {typeof s.price === 'number' && s.price > 0 && (
-                    <span style={{ marginTop: 6, fontWeight: 700, color: selectedService === serviceOptions.length + i ? '#111' : '#ffd600' }}>£{s.price.toFixed(2)}</span>
+                    <span style={{ marginTop: 6, fontWeight: 700, color: selectedServices.includes(serviceOptions.length + i) ? '#111' : '#ffd600' }}>£{s.price.toFixed(2)}</span>
                   )}
                   {typeof s.labourHours === 'number' && s.labourHours > 0 && typeof s.labourCost === 'number' && s.labourCost > 0 && (
-                    <span style={{ marginTop: 4, fontWeight: 500, fontSize: '0.9rem', color: selectedService === serviceOptions.length + i ? '#111' : '#bdbdbd' }}>
+                    <span style={{ marginTop: 4, fontWeight: 500, fontSize: '0.9rem', color: selectedServices.includes(serviceOptions.length + i) ? '#111' : '#bdbdbd' }}>
                       Labour: {s.labourHours}h × £{s.labourCost}/h = £{(s.labourHours * s.labourCost).toFixed(2)}
                     </span>
                   )}
@@ -2116,9 +2403,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
               <div className="schedule-modal-summary-title">Booking Summary</div>
               <div style={{ marginBottom: 6 }}>Services:</div>
               <ul className="schedule-modal-summary-list">
-                <li>{Array.isArray(serviceOptions) && serviceOptions[selectedService] ? serviceOptions[selectedService].label : 'Unknown Service'} ({Array.isArray(serviceOptions) && serviceOptions[selectedService] ? serviceOptions[selectedService].sub.split(' - ')[0] : 'Unknown Duration'}){selectedTime ? ` - ${selectedTime}` : ''}</li>
+                <li>
+                  {selectedServices.length === 0 ? 'No Services Selected' : 
+                   selectedServices.length === 1 ? 
+                     (selectedServices[0] < serviceOptions.length ? 
+                       serviceOptions[selectedServices[0]]?.label : 
+                       customServices[selectedServices[0] - serviceOptions.length]?.label) : 
+                     `${selectedServices.length} Services Selected`
+                  }
+                  {selectedTime ? ` - ${selectedTime}` : ''}
+                </li>
               </ul>
-              <div style={{ marginTop: 12, fontWeight: 600, color: '#ffd600' }}>Total: £{Array.isArray(serviceOptions) && serviceOptions[selectedService] ? (serviceOptions[selectedService].price || 0) : 0}</div>
+              <div style={{ marginTop: 12, fontWeight: 600, color: '#ffd600' }}>Total: £{total.toFixed(2)}</div>
             </div>
             <div className="modal-btn-row">
               <button className="modal-btn-outline modal-btn-block" onClick={() => setShowScheduleModal(false)}>Cancel</button>
@@ -2254,9 +2550,22 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                               </div>
                             </div>
                             <div>
-                              <span style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>Service:</span>
-                              <div style={{ color: '#fff', fontWeight: '600', fontSize: '1.1rem' }}>{service.service?.label}</div>
-                              <div style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>{service.service?.sub}</div>
+                              <span style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>Service{service.services && service.services.length > 1 ? 's' : ''}:</span>
+                              {service.services && service.services.length > 0 ? (
+                                <div>
+                                  {service.services.map((svc: any, svcIndex: number) => (
+                                    <div key={svcIndex} style={{ marginBottom: '4px' }}>
+                                      <div style={{ color: '#fff', fontWeight: '600', fontSize: '1.1rem' }}>{svc.label}</div>
+                                      <div style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>{svc.sub}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div>
+                                  <div style={{ color: '#fff', fontWeight: '600', fontSize: '1.1rem' }}>{service.service?.label}</div>
+                                  <div style={{ color: '#bdbdbd', fontSize: '0.9rem' }}>{service.service?.sub}</div>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div style={{ textAlign: 'right', minWidth: '150px' }}>
@@ -2322,7 +2631,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                           </div>
                           <div>
                             <span style={{ color: '#bdbdbd', fontSize: '0.8rem' }}>Labour Cost per Hour:</span>
-                            <div style={{ color: '#fff', fontWeight: '500' }}>£{service.labourCost || 0}</div>
+                            <div style={{ color: '#fff', fontWeight: '500' }}>£{typeof service.labourCost === 'number' ? service.labourCost.toFixed(2) : (service.labourCost ? Number(service.labourCost).toFixed(2) : '0.00')}</div>
                           </div>
                           <div>
                             <span style={{ color: '#bdbdbd', fontSize: '0.8rem' }}>Total Labour Cost:</span>
@@ -2332,15 +2641,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                           </div>
                           <div>
                             <span style={{ color: '#bdbdbd', fontSize: '0.8rem' }}>Parts Cost:</span>
-                            <div style={{ color: '#fff', fontWeight: '500' }}>£{service.partsCost || 0}</div>
+                            <div style={{ color: '#fff', fontWeight: '500' }}>£{typeof service.partsCost === 'number' ? service.partsCost.toFixed(2) : (service.partsCost ? Number(service.partsCost).toFixed(2) : '0.00')}</div>
                           </div>
                           <div>
                             <span style={{ color: '#bdbdbd', fontSize: '0.8rem' }}>Subtotal:</span>
-                            <div style={{ color: '#fff', fontWeight: '500' }}>£{service.subtotal || 0}</div>
+                            <div style={{ color: '#fff', fontWeight: '500' }}>£{typeof service.subtotal === 'number' ? service.subtotal.toFixed(2) : (service.subtotal ? Number(service.subtotal).toFixed(2) : '0.00')}</div>
                           </div>
                           <div>
                             <span style={{ color: '#bdbdbd', fontSize: '0.8rem' }}>VAT:</span>
-                            <div style={{ color: '#fff', fontWeight: '500' }}>£{service.vat || 0}</div>
+                            <div style={{ color: '#fff', fontWeight: '500' }}>£{typeof service.vat === 'number' ? service.vat.toFixed(2) : (service.vat ? Number(service.vat).toFixed(2) : '0.00')}</div>
                           </div>
                         </div>
                       </div>
@@ -2611,11 +2920,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                 <button
                   key={s.label}
                   type="button"
-                  onClick={() => setLookupSelectedService(i)}
+                  onClick={() => toggleLookupService(i)}
                   style={{
-                    background: lookupSelectedService === i ? '#ffd600' : '#181818',
-                    color: lookupSelectedService === i ? '#111' : '#fff',
-                    border: lookupSelectedService === i ? '2px solid #ffd600' : '2px solid #444',
+                    background: lookupSelectedServices.includes(i) ? '#ffd600' : '#181818',
+                    color: lookupSelectedServices.includes(i) ? '#111' : '#fff',
+                    border: lookupSelectedServices.includes(i) ? '2px solid #ffd600' : '2px solid #444',
                     borderRadius: 12,
                     padding: '32px 32px',
                     fontWeight: 600,
@@ -2633,12 +2942,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                   }}
                 >
                   <span>{s.label}</span>
-                  <span style={{ fontWeight: 400, fontSize: '1.02rem', color: lookupSelectedService === i ? '#111' : '#bdbdbd' }}>{s.sub}</span>
+                  <span style={{ fontWeight: 400, fontSize: '1.02rem', color: lookupSelectedServices.includes(i) ? '#111' : '#bdbdbd' }}>{s.sub}</span>
                   {typeof s.price === 'number' && s.price > 0 && (
-                    <span style={{ marginTop: 6, fontWeight: 700, color: lookupSelectedService === i ? '#111' : '#ffd600' }}>£{s.price.toFixed(2)}</span>
+                    <span style={{ marginTop: 6, fontWeight: 700, color: lookupSelectedServices.includes(i) ? '#111' : '#ffd600' }}>£{s.price.toFixed(2)}</span>
                   )}
                   {typeof s.labourHours === 'number' && s.labourHours > 0 && typeof s.labourCost === 'number' && s.labourCost > 0 && (
-                    <span style={{ marginTop: 4, fontWeight: 500, fontSize: '0.9rem', color: lookupSelectedService === i ? '#111' : '#bdbdbd' }}>
+                    <span style={{ marginTop: 4, fontWeight: 500, fontSize: '0.9rem', color: lookupSelectedServices.includes(i) ? '#111' : '#bdbdbd' }}>
                       Labour: {s.labourHours}h × £{s.labourCost}/h = £{(s.labourHours * s.labourCost).toFixed(2)}
                     </span>
                   )}
@@ -2672,11 +2981,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                 <button
                   key={s.label + s.sub + i}
                   type="button"
-                  onClick={() => setLookupSelectedService(serviceOptions.length + i)}
+                  onClick={() => toggleLookupService(serviceOptions.length + i)}
                   style={{
-                    background: lookupSelectedService === serviceOptions.length + i ? '#ffd600' : '#181818',
-                    color: lookupSelectedService === serviceOptions.length + i ? '#111' : '#fff',
-                    border: lookupSelectedService === serviceOptions.length + i ? '2px solid #ffd600' : '2px solid #444',
+                    background: lookupSelectedServices.includes(serviceOptions.length + i) ? '#ffd600' : '#181818',
+                    color: lookupSelectedServices.includes(serviceOptions.length + i) ? '#111' : '#fff',
+                    border: lookupSelectedServices.includes(serviceOptions.length + i) ? '2px solid #ffd600' : '2px solid #444',
                     borderRadius: 12,
                     padding: '32px 32px',
                     fontWeight: 600,
@@ -2694,12 +3003,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                   }}
                 >
                   <span>{s.label}</span>
-                  <span style={{ fontWeight: 400, fontSize: '1.02rem', color: lookupSelectedService === serviceOptions.length + i ? '#111' : '#bdbdbd' }}>{s.sub}</span>
+                  <span style={{ fontWeight: 400, fontSize: '1.02rem', color: lookupSelectedServices.includes(serviceOptions.length + i) ? '#111' : '#bdbdbd' }}>{s.sub}</span>
                   {typeof s.price === 'number' && s.price > 0 && (
-                    <span style={{ marginTop: 6, fontWeight: 700, color: lookupSelectedService === serviceOptions.length + i ? '#111' : '#ffd600' }}>£{s.price.toFixed(2)}</span>
+                    <span style={{ marginTop: 6, fontWeight: 700, color: lookupSelectedServices.includes(serviceOptions.length + i) ? '#111' : '#ffd600' }}>£{s.price.toFixed(2)}</span>
                   )}
                   {typeof s.labourHours === 'number' && s.labourHours > 0 && typeof s.labourCost === 'number' && s.labourCost > 0 && (
-                    <span style={{ marginTop: 4, fontWeight: 500, fontSize: '0.9rem', color: lookupSelectedService === serviceOptions.length + i ? '#111' : '#bdbdbd' }}>
+                    <span style={{ marginTop: 4, fontWeight: 500, fontSize: '0.9rem', color: lookupSelectedServices.includes(serviceOptions.length + i) ? '#111' : '#bdbdbd' }}>
                       Labour: {s.labourHours}h × £{s.labourCost}/h = £{(s.labourHours * s.labourCost).toFixed(2)}
                     </span>
                   )}
@@ -3005,8 +3314,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ initialTab }) => {
                 </button>
                 <button 
                   className="modal-btn-yellow" 
-                  onClick={handleLookupAddPart}
-                  disabled={!partForm.partNumber || !partForm.name}
+                  onClick={handleAddNewPartToDatabase}
+                  disabled={!partForm.partNumber || !partForm.name || !partForm.cost}
                 >
                   Add Part
                 </button>

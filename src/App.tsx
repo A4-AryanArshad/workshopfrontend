@@ -21,6 +21,7 @@ import ResetPasswordPage from './components/ResetPasswordPage';
 import UserDashboard from './components/UserDashboard';
 import PaymentSuccessPage from './components/PaymentSuccessPage';
 import PaymentCancelledPage from './components/PaymentCancelledPage';
+import FinancePage from './components/FinancePage';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 const App: React.FC = () => {
@@ -37,6 +38,7 @@ const App: React.FC = () => {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/dashboard" element={<AdminRoute><DashboardPage /></AdminRoute>} />
         <Route path="/dashboard/add-images" element={<AdminRoute><AddImagesPage /></AdminRoute>} />
+        <Route path="/dashboard/finance" element={<AdminRoute><FinancePage /></AdminRoute>} />
         <Route path="/dashboard/past-services" element={<PastServicesPage />} />
         <Route path="/dashboard/upcoming" element={<UpcomingAppointmentsPage />} />
         <Route path="/dashboard/messages" element={<MessagesPage />} />

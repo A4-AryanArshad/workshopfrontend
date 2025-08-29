@@ -25,14 +25,28 @@ const AboutPage: React.FC = () => {
               <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: 8 }}>Our Story</h2>
               <div style={{ width: 64, height: 4, background: '#ffd600', borderRadius: 2, marginBottom: 24 }} />
               <div style={{ color: '#eaeaea', fontSize: '1.08rem', lineHeight: 1.7 }}>
-                J<sup>2</sup> Mechanics was established with a clear mission: to provide honest, reliable automotive services to car owners in North London. Our story began with two skilled mechanics, both named James (hence J<sup>2</sup>), who were frustrated with the industry's lack of transparency and customer service.<br /><br />
-                They combined their expertise and passion for quality workmanship to create a garage where customers could expect fair pricing, expert service, and complete transparency throughout the repair process.<br /><br />
-                Today, we've grown our team of certified technicians, but our founding principles remain unchanged. From routine maintenance to complex repairs, we approach every job with the same dedication to quality and customer satisfaction.
+                J<sup>2</sup> Mechanics was founded with one simple goal: to bring honesty, reliability, and professionalism back into the automotive industry.<br /><br />
+                The business takes its name from Joel, an internationally experienced automotive manager, and Jay, a highly skilled vehicle technician. Together, they recognised a growing need for a garage that put transparency and trust at the heart of every repair.<br /><br />
+                What began as a partnership between two professionals with decades of combined experience has grown into a trusted team of certified technicians serving car owners across North London.<br /><br />
+                Frustrated by the industry's lack of clarity and customer care, Joel and Jay set out to create a service where customers could always rely on:<br />
+                • Fair, upfront pricing<br />
+                • Expert workmanship<br />
+                • Clear communication every step of the way<br /><br />
+                From routine maintenance to complex diagnostics and repairs, we remain committed to the values that shaped our beginnings. At J<sup>2</sup> Mechanics, every vehicle is treated with the same care and attention as if it were our own—because our customers deserve nothing less than honest work and reliable results.
               </div>
             </div>
             <div style={{ flex: 1, minWidth: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: '100%', height: '100%', minHeight: 220, maxHeight: 340, background: '#181818', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8, boxShadow: '0 4px 24px #0006' }}>
-                <span style={{ color: '#444', fontSize: 18, textAlign: 'center', padding: 16 }}>J<sup>2</sup> Mechanics workshop in North London</span>
+              <div style={{ width: '100%', height: '100%', minHeight: 220, maxHeight: 340, background: '#181818', borderRadius: 16, overflow: 'hidden', marginBottom: 8, boxShadow: '0 4px 24px #0006' }}>
+                <iframe 
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d79368.046792306!2d-0.19853366273448428!3d51.56362352093905!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x48761b1c5f1a9429%3A0x5ffdbed0f63cba58!2sCamden%20Town%2C%20London!5e0!3m2!1sen!2suk!4v1756385295009!5m2!1sen!2suk" 
+                  width="100%" 
+                  height="100%" 
+                  style={{ border: 0, display: 'block', minHeight: '220px' }} 
+                  allowFullScreen={true} 
+                  loading="lazy" 
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="J2 Mechanics Location - Camden Town, London"
+                />
               </div>
             </div>
           </div>

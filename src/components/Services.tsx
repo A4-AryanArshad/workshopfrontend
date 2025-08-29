@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import ClientBookingModal from './ClientBookingModal';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { API_BASE_URL } from '../config';
 gsap.registerPlugin(ScrollTrigger);
 
-type ApiService = { _id: string; label: string; sub: string; price?: number; category?: string; description?: string; labourHours?: number; labourCost?: number };
+type ApiService = { _id: string; label: string; sub: string; price?: number; category?: string; description?: string };
 
 const fallbackServiceData = [
   {
@@ -16,9 +17,6 @@ const fallbackServiceData = [
     price: '£199',
     duration: '3-4 hours',
     details: 'Comprehensive service including oil change, all fluid checks and top-ups, brake inspection, air filter replacement, and full vehicle health check with diagnostic scan.',
-    labourHours: 3,
-    labourCost: 10,
-    originalService: null,
   },
   {
     id: 2,
@@ -27,9 +25,6 @@ const fallbackServiceData = [
     price: '£99',
     duration: '1-2 hours',
     details: 'Basic service including oil and filter change, fluid top-ups, and essential safety checks.',
-    labourHours: 1.5,
-    labourCost: 10,
-    originalService: null,
   },
   {
     id: 3,
@@ -38,9 +33,6 @@ const fallbackServiceData = [
     price: '£60',
     duration: '1 hour',
     details: 'Full vehicle diagnostics scan to identify issues and error codes.',
-    labourHours: 1,
-    labourCost: 10,
-    originalService: null,
   },
   {
     id: 4,
@@ -49,9 +41,6 @@ const fallbackServiceData = [
     price: '£150',
     duration: '2-3 hours',
     details: 'Replacement of brake pads and discs, including safety checks.',
-    labourHours: 2.5,
-    labourCost: 10,
-    originalService: null,
   },
   {
     id: 5,
@@ -60,9 +49,6 @@ const fallbackServiceData = [
     price: '£45',
     duration: '1 hour',
     details: 'Tyre removal and fitting, balancing, and safety inspection.',
-    labourHours: 1,
-    labourCost: 10,
-    originalService: null,
   },
   {
     id: 6,
@@ -71,9 +57,6 @@ const fallbackServiceData = [
     price: '£120',
     duration: '2 hours',
     details: 'Pre-MOT inspection and preparation to help your vehicle pass the MOT test.',
-    labourHours: 2,
-    labourCost: 10,
-    originalService: null,
   },
 ];
 
@@ -83,6 +66,8 @@ const Services: React.FC = () => {
   const [selected, setSelected] = useState('All');
   const [expanded, setExpanded] = useState<number | null>(null);
   const [serviceData, setServiceData] = useState<typeof fallbackServiceData>(fallbackServiceData);
+  const [isClientBookingOpen, setIsClientBookingOpen] = useState(false);
+  const [selectedServiceForBooking, setSelectedServiceForBooking] = useState<typeof fallbackServiceData[0] | null>(null);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/services`)
@@ -91,29 +76,45 @@ const Services: React.FC = () => {
         console.log('Fetched services:', list);
         if (!Array.isArray(list) || list.length === 0) return;
         const mapped = list.map((s, idx) => {
-          const durationRaw = s.sub?.split(' - ')[0] || '';
+          // Extract duration from sub field
           let duration = '';
-          if (durationRaw.includes('h')) {
-            const hours = parseFloat(durationRaw.replace('h', ''));
-            duration = hours === 1 ? '1 hour' : `${hours} hours`;
-          } else {
-            duration = durationRaw;
+          if (s.sub) {
+            const parts = s.sub.split(' - ');
+            const durationPart = parts[0];
+            if (durationPart) {
+              // Remove 'h' if present and convert to number
+              const numberMatch = durationPart.match(/[\d.]+/);
+              if (numberMatch) {
+                const hours = parseFloat(numberMatch[0]);
+                duration = hours === 1 ? 'est. 1 hour' : `est. ${hours} hours`;
+              }
+            }
+          }
+          // Fallback to show something if no duration found
+          if (!duration) {
+            duration = 'est. 1 hour';
           }
           const category = s.category || (s.sub?.split(' - ')[1] || '').trim();
           return {
             id: idx + 1,
             category: category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Maintenance',
             title: s.label,
-            price: s.price ? `£${Number(s.price).toFixed(0)}` : '£0',
+            price: s.price ? `£${Number(s.price).toFixed(0)}` : (s.label.toLowerCase().includes('diagnostic') ? '£45' : '£70'),
             duration: duration,
             details: s.description || '',
-            labourHours: s.labourHours || 0,
-            labourCost: s.labourCost || 0,
-            originalService: s // Keep reference to original service data
           };
         });
+        
+        // Remove duplicates based on service title (name)
+        const uniqueServices = mapped.filter((service, index, self) =>
+          index === self.findIndex((s) => s.title.toLowerCase() === service.title.toLowerCase())
+        );
+        
         console.log('Mapped services:', mapped);
-        setServiceData(mapped as any);
+        console.log('Unique services (duplicates removed):', uniqueServices);
+        console.log('Removed duplicates:', mapped.length - uniqueServices.length);
+        
+        setServiceData(uniqueServices as any);
       })
       .catch((error) => {
         console.error('Error fetching services:', error);
@@ -123,17 +124,8 @@ const Services: React.FC = () => {
   const filtered = selected === 'All' ? serviceData : serviceData.filter(s => s.category === selected);
 
   const handleClientBooking = (service: typeof fallbackServiceData[0]) => {
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    const userEmail = localStorage.getItem('userEmail');
-    
-    if (token && userEmail) {
-      // User is logged in, redirect to user dashboard
-      window.location.href = 'https://workshopfrontend-one.vercel.app/user-dashboard';
-    } else {
-      // User is not logged in, redirect to login page
-      window.location.href = 'https://workshopfrontend-one.vercel.app/login';
-    }
+    setSelectedServiceForBooking(service);
+    setIsClientBookingOpen(true);
   };
 
   // Animation refs
@@ -218,7 +210,7 @@ const Services: React.FC = () => {
                   <span className="service-card-title">{service.title}</span>
                 </div>
                 <div className="service-card-info">
-                  <span className="service-card-price">{service.price} <span className="service-card-from">from</span></span>
+                  <span className="service-card-price">{service.price} <span className="service-card-from">from + Call-Out Charge</span></span>
                   <span className="service-card-duration">{service.duration}</span>
                 </div>
                 <button
@@ -252,6 +244,15 @@ const Services: React.FC = () => {
         )}
       </div>
 
+      {/* Client Booking Modal */}
+      <ClientBookingModal
+        isOpen={isClientBookingOpen}
+        onClose={() => {
+          setIsClientBookingOpen(false);
+          setSelectedServiceForBooking(null);
+        }}
+        selectedService={selectedServiceForBooking}
+      />
     </section>
   );
 };
