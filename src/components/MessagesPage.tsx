@@ -38,6 +38,9 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
   const [error, setError] = useState('');
   const [showServicesSidebar, setShowServicesSidebar] = useState(false);
   const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [lastBookingCount, setLastBookingCount] = useState(0);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
 
   // Get user info from localStorage
   const currentUserEmail = userEmail || localStorage.getItem('userEmail');
@@ -51,20 +54,25 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
     }
   }, [currentUserEmail]);
 
-  // Auto-refresh bookings every 10 seconds to show recent messages at the top
+  // Auto-refresh bookings every 5 seconds for real-time messaging
   useEffect(() => {
-    if (currentUserEmail) {
+    if (currentUserEmail && autoRefreshEnabled) {
       const interval = setInterval(() => {
         fetchBookingsWithMessages();
-      }, 10000); // Refresh every 10 seconds
+      }, 5000); // Refresh every 5 seconds for real-time messaging
       
       return () => clearInterval(interval);
     }
-  }, [currentUserEmail]);
+  }, [currentUserEmail, autoRefreshEnabled]);
 
   // Manual refresh function
   const refreshBookings = async () => {
     await fetchBookingsWithMessages();
+  };
+
+  // Toggle auto-refresh function
+  const toggleAutoRefresh = () => {
+    setAutoRefreshEnabled(!autoRefreshEnabled);
   };
 
   const fetchBookingsWithMessages = async () => {
@@ -74,7 +82,18 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
       const data = await response.json();
       
       if (data.success) {
-        setBookings(data.bookings);
+        const newBookings = data.bookings || [];
+        
+        // Check for new messages (detect if any booking has more messages than before)
+        const totalCurrentMessages = newBookings.reduce((sum: number, booking: any) => sum + (booking.unreadMessageCount || 0), 0);
+        if (lastBookingCount > 0 && totalCurrentMessages > lastBookingCount) {
+          setHasNewMessages(true);
+          // Clear the notification after 3 seconds
+          setTimeout(() => setHasNewMessages(false), 3000);
+        }
+        
+        setBookings(newBookings);
+        setLastBookingCount(totalCurrentMessages);
       } else {
         setError('Failed to fetch bookings');
       }
@@ -537,7 +556,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
               <div style={{ 
                 color: '#bdbdbd', 
                 fontSize: 'clamp(0.9rem, 3vw, 1.15rem)', 
-                marginBottom: '12px',
+                marginBottom: '8px',
                 lineHeight: 1.5,
                 wordWrap: 'break-word',
                 overflowWrap: 'break-word',
@@ -549,6 +568,16 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
                   ? 'You have no bookings yet. Book a service to start messaging with our staff.'
                   : `You have ${filteredBookings.length} booking${filteredBookings.length !== 1 ? 's' : ''} with message history. Unread messages are prioritized at the top.`
                 }
+              </div>
+              
+              {/* Auto-refresh status */}
+              <div style={{ 
+                color: hasNewMessages ? '#4CAF50' : '#888', 
+                fontSize: 'clamp(0.8rem, 2.5vw, 0.9rem)', 
+                marginBottom: '12px',
+                fontWeight: hasNewMessages ? '600' : 'normal'
+              }}>
+                {hasNewMessages ? '✨ New messages received!' : (autoRefreshEnabled ? (loading ? '🔄 Checking for new messages...' : '🔄 Auto-refresh active (5s)') : '⏸️ Auto-refresh paused')}
               </div>
             </div>
 
@@ -621,6 +650,43 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
                   ✕ Clear Filter
                 </button>
               )}
+
+              {/* Auto-refresh Toggle Button */}
+              <button 
+                onClick={toggleAutoRefresh}
+                style={{
+                  background: autoRefreshEnabled ? '#4CAF50' : '#666',
+                  color: '#fff',
+                  border: 'none',
+                  padding: 'clamp(8px, 2vw, 10px) clamp(12px, 3vw, 16px)',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: 'clamp(0.75rem, 2vw, 0.85rem)',
+                  flexShrink: 0
+                }}
+              >
+                {autoRefreshEnabled ? '🔄' : '⏸️'} {autoRefreshEnabled ? 'Auto' : 'Paused'}
+              </button>
+
+              {/* Manual Refresh Button */}
+              <button 
+                onClick={refreshBookings}
+                disabled={loading}
+                style={{
+                  background: loading ? '#666' : '#17a2b8',
+                  color: '#fff',
+                  border: 'none',
+                  padding: 'clamp(8px, 2vw, 10px) clamp(12px, 3vw, 16px)',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  fontSize: 'clamp(0.75rem, 2vw, 0.85rem)',
+                  flexShrink: 0
+                }}
+              >
+                {loading ? '⏳' : '🔄'} {loading ? 'Refreshing...' : 'Refresh'}
+              </button>
             </div>
           </div>
 
@@ -845,6 +911,28 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
+                  {/* Unread Message Badge */}
+                  {booking.unreadMessageCount > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '20px',
+                      background: '#ff4444',
+                      color: '#fff',
+                      borderRadius: '50%',
+                      padding: '6px 10px',
+                      fontSize: '0.75rem',
+                      fontWeight: '700',
+                      minWidth: '24px',
+                      textAlign: 'center',
+                      animation: 'pulse 2s infinite',
+                      boxShadow: '0 2px 8px rgba(255, 68, 68, 0.3)',
+                      zIndex: 2
+                    }}>
+                      {booking.unreadMessageCount > 9 ? '9+' : booking.unreadMessageCount}
+                    </div>
+                  )}
+                  
                   {/* Priority Activity Indicator */}
                   {index === 0 && booking.unreadMessageCount > 0 && (
                     <div style={{
@@ -987,7 +1075,33 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
                         </div>
                       )}
                       
-                                          <div style={{ 
+                      {/* Last Message Preview */}
+                      {booking.lastMessage && (
+                        <div style={{ 
+                          color: '#aaa', 
+                          fontSize: 'clamp(0.8rem, 2.5vw, 0.85rem)', 
+                          fontStyle: 'italic', 
+                          marginTop: '8px', 
+                          padding: '8px 10px', 
+                          background: '#1a1a1a', 
+                          borderRadius: '8px', 
+                          borderLeft: '3px solid #ffd700',
+                          width: '100%',
+                          boxSizing: 'border-box'
+                        }}>
+                          <div style={{ marginBottom: 4, color: '#ffd700', fontSize: '0.75rem', fontWeight: '600' }}>
+                            Last message:
+                          </div>
+                          <div style={{ marginBottom: 4 }}>
+                            "{booking.lastMessage.message.substring(0, 80)}..."
+                          </div>
+                          <div style={{ color: '#888', fontSize: '0.7rem' }}>
+                            - {booking.lastMessage.senderName}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div style={{ 
                       color: '#888', 
                         fontSize: 'clamp(0.7rem, 2.5vw, 0.8rem)',
                       textTransform: 'uppercase',
