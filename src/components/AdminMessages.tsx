@@ -182,7 +182,7 @@ const AdminMessages: React.FC = () => {
       refreshIntervalRef.current = setInterval(async () => {
         // Don't refresh if user is typing or if already loading
         if (selectedBooking && !messagesLoading && !isTyping) {
-          await fetchMessages(selectedBooking._id);
+          await fetchMessages(selectedBooking._id, false); // Background refresh
           // Also refresh conversations to keep them updated
           await refreshConversations();
         }
@@ -324,10 +324,14 @@ const AdminMessages: React.FC = () => {
     }
   };
 
-  const fetchMessages = async (bookingId: string) => {
+  const fetchMessages = async (bookingId: string, isInitialLoad = false) => {
     try {
       console.log('🔍 fetchMessages called for booking:', bookingId);
-      setMessagesLoading(true);
+      
+      // Only show loading on initial load, not on auto-refresh
+      if (isInitialLoad || messages.length === 0) {
+        setMessagesLoading(true);
+      }
       
       // Use the effective admin email for API calls
       const url = `${API_BASE_URL}/api/bookings/${bookingId}/messages?userEmail=${encodeURIComponent(effectiveUserEmail)}`;
@@ -383,7 +387,7 @@ const AdminMessages: React.FC = () => {
       refreshTimeoutRef.current = setTimeout(async () => {
         setRefreshing(true);
         try {
-          await fetchMessages(selectedBooking._id);
+          await fetchMessages(selectedBooking._id, false); // Manual refresh
         } catch (error) {
           console.error('Error refreshing messages:', error);
         } finally {
@@ -458,14 +462,13 @@ const AdminMessages: React.FC = () => {
     }
 
     setSelectedBooking(booking);
-    setMessagesLoading(true); // Show loading state instead of clearing messages
-    await fetchMessages(booking._id);
+    await fetchMessages(booking._id, true); // Initial load with loading state
     
     // Set up auto-refresh for this booking only if enabled
     if (autoRefreshEnabled) {
       refreshIntervalRef.current = setInterval(async () => {
         if (selectedBooking && selectedBooking._id === booking._id) {
-          await fetchMessages(booking._id);
+          await fetchMessages(booking._id, false); // Background refresh
         }
       }, 5000); // Refresh every 5 seconds
     }
@@ -480,7 +483,7 @@ const AdminMessages: React.FC = () => {
       if (selectedBooking) {
         refreshIntervalRef.current = setInterval(async () => {
           if (selectedBooking) {
-            await fetchMessages(selectedBooking._id);
+            await fetchMessages(selectedBooking._id, false); // Background refresh
             await refreshConversations(); // Also refresh conversations to keep them updated
           }
         }, 5000);
@@ -536,7 +539,7 @@ const AdminMessages: React.FC = () => {
         console.log('✅ Message sent successfully');
         setNewMessage('');
         // Refresh messages to show the new one
-        await fetchMessages(selectedBooking._id);
+        await fetchMessages(selectedBooking._id, false); // Refresh after sending
         // Also refresh conversations to update the order
         await refreshConversations();
       } else {
