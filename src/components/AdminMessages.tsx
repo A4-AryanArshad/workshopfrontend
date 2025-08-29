@@ -66,6 +66,8 @@ const AdminMessages: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [lastTypingTime, setLastTypingTime] = useState(0);
   const [showSidebar, setShowSidebar] = useState(false); // Mobile sidebar toggle
+  const [lastMessageCount, setLastMessageCount] = useState(0);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
   
   // Use useRef for interval and timeout management
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -184,7 +186,7 @@ const AdminMessages: React.FC = () => {
           // Also refresh conversations to keep them updated
           await refreshConversations();
         }
-      }, 15000); // Increased from 5 seconds to 15 seconds
+      }, 5000); // Refresh every 5 seconds for real-time messaging
     }
     
     return () => {
@@ -205,7 +207,7 @@ const AdminMessages: React.FC = () => {
       if (recentConversations.length > 0 && !isTyping) {
         await refreshConversations();
       }
-    }, 30000); // Increased from 10 seconds to 30 seconds
+    }, 10000); // Refresh conversations every 10 seconds
     
     return () => clearInterval(conversationInterval);
   }, [recentConversations.length, isTyping]); // Added isTyping dependency
@@ -341,7 +343,18 @@ const AdminMessages: React.FC = () => {
       
       if (data.success) {
         console.log('✅ Messages fetched successfully, count:', data.messages?.length || 0);
-        setMessages(data.messages || []);
+        const newMessages = data.messages || [];
+        
+        // Check for new messages
+        if (lastMessageCount > 0 && newMessages.length > lastMessageCount) {
+          setHasNewMessages(true);
+          // Clear the notification after 3 seconds
+          setTimeout(() => setHasNewMessages(false), 3000);
+        }
+        
+        setMessages(newMessages);
+        setLastMessageCount(newMessages.length);
+        
         // Refresh conversations to update unread counts after messages are marked as read
         // Refresh conversations to update unread counts
         await refreshConversations();
@@ -709,15 +722,37 @@ const AdminMessages: React.FC = () => {
                       <div style={{ background: '#1a1a1a', padding: 20, borderRadius: 12, textAlign: 'center', color: '#bdbdbd', border: '1px solid #333' }}>No conversations</div>
                     ) : (
                       filteredRecentConversations.map((conversation) => (
-                        <div key={conversation._id} style={{ background: selectedBooking?._id === conversation._id ? '#333' : '#232323', padding: 16, borderRadius: 12, marginBottom: 12, border: `2px solid ${selectedBooking?._id === conversation._id ? '#ffd700' : '#333'}`, cursor: 'pointer' }} onClick={() => selectBooking(conversation)}>
-                          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#ffd700', marginBottom: 6 }}>
-                            {conversation.service?.label} - {conversation.service?.sub}
-                            {(conversation as any)?.car?.registration && (
-                              <span style={{ color: '#bdbdbd', marginLeft: 8 }}>• {(conversation as any).car.registration}</span>
+                        <div key={conversation._id} style={{ background: selectedBooking?._id === conversation._id ? '#333' : '#232323', padding: 16, borderRadius: 12, marginBottom: 12, border: `2px solid ${selectedBooking?._id === conversation._id ? '#ffd700' : '#333'}`, cursor: 'pointer', position: 'relative' }} onClick={() => selectBooking(conversation)}>
+                          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#ffd700', marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>
+                              {conversation.service?.label} - {conversation.service?.sub}
+                              {(conversation as any)?.car?.registration && (
+                                <span style={{ color: '#bdbdbd', marginLeft: 8 }}>• {(conversation as any).car.registration}</span>
+                              )}
+                            </span>
+                            {conversation.unreadCount && conversation.unreadCount > 0 && (
+                              <span style={{
+                                background: '#ff4444',
+                                color: '#fff',
+                                borderRadius: '50%',
+                                padding: '4px 8px',
+                                fontSize: '0.7rem',
+                                fontWeight: '700',
+                                minWidth: '20px',
+                                textAlign: 'center',
+                                animation: 'pulse 2s infinite'
+                              }}>
+                                {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
+                              </span>
                             )}
                           </div>
                           <div style={{ color: '#bdbdbd', fontSize: '0.85rem', marginBottom: 6 }}>{formatDate(conversation.date)} at {conversation.time}</div>
                           <div style={{ color: '#fff', fontSize: '0.9rem', marginBottom: 6 }}>Customer: {conversation.customer.name}</div>
+                          {conversation.lastMessage && (
+                            <div style={{ color: '#aaa', fontSize: '0.8rem', fontStyle: 'italic', marginTop: 8, padding: 8, background: '#1a1a1a', borderRadius: 6 }}>
+                              Last: "{conversation.lastMessage.message.substring(0, 50)}..." - {conversation.lastMessage.senderName}
+                            </div>
+                          )}
                         </div>
                       ))
                     )}
@@ -796,14 +831,41 @@ const AdminMessages: React.FC = () => {
                   ) : (
                     filteredRecentConversations.map((conversation) => (
                       <div key={conversation._id} style={{ background: selectedBooking?._id === conversation._id ? '#333' : '#232323', padding: 20, borderRadius: 12, marginBottom: 16, border: `2px solid ${selectedBooking?._id === conversation._id ? '#ffd700' : '#333'}`, cursor: 'pointer', transition: 'all 0.2s ease', position: 'relative' }} onClick={() => selectBooking(conversation)}>
-                        <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#ffd700', marginBottom: 8 }}>
-                          {conversation.service?.label} - {conversation.service?.sub}
-                          {(conversation as any)?.car?.registration && (
-                            <span style={{ color: '#bdbdbd', marginLeft: 8 }}>• {(conversation as any).car.registration}</span>
+                        <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#ffd700', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>
+                            {conversation.service?.label} - {conversation.service?.sub}
+                            {(conversation as any)?.car?.registration && (
+                              <span style={{ color: '#bdbdbd', marginLeft: 8 }}>• {(conversation as any).car.registration}</span>
+                            )}
+                          </span>
+                          {conversation.unreadCount && conversation.unreadCount > 0 && (
+                            <span style={{
+                              background: '#ff4444',
+                              color: '#fff',
+                              borderRadius: '50%',
+                              padding: '6px 10px',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
+                              minWidth: '24px',
+                              textAlign: 'center',
+                              animation: 'pulse 2s infinite',
+                              boxShadow: '0 2px 8px rgba(255, 68, 68, 0.3)'
+                            }}>
+                              {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
+                            </span>
                           )}
                         </div>
                         <div style={{ color: '#bdbdbd', fontSize: '0.9rem', marginBottom: 8 }}>{formatDate(conversation.date)} at {conversation.time}</div>
                         <div style={{ color: '#fff', fontSize: '0.9rem', marginBottom: 8 }}>Customer: {conversation.customer.name}</div>
+                        {conversation.lastMessage && (
+                          <div style={{ color: '#aaa', fontSize: '0.85rem', fontStyle: 'italic', marginTop: 12, padding: 10, background: '#1a1a1a', borderRadius: 8, borderLeft: '3px solid #ffd700' }}>
+                            <div style={{ marginBottom: 4, color: '#ffd700', fontSize: '0.8rem' }}>Last message:</div>
+                            "{conversation.lastMessage.message.substring(0, 60)}..." 
+                            <div style={{ marginTop: 4, color: '#888', fontSize: '0.75rem' }}>
+                              - {conversation.lastMessage.senderName}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))
                   )}
@@ -846,8 +908,8 @@ const AdminMessages: React.FC = () => {
                       <h2 style={{ color: '#ffd700', fontSize: 'clamp(1.2rem, 4vw, 1.5rem)', fontWeight: 600, marginBottom: 4 }}>
                         Messages - {selectedBooking.customer.name}
                       </h2>
-                      <div style={{ color: '#888', fontSize: '0.9rem' }}>
-                        {autoRefreshEnabled ? '🔄 Auto-refresh active (5s)' : '⏸️ Auto-refresh paused'}
+                      <div style={{ color: hasNewMessages ? '#4CAF50' : '#888', fontSize: '0.9rem', fontWeight: hasNewMessages ? '600' : 'normal' }}>
+                        {hasNewMessages ? '✨ New messages received!' : (autoRefreshEnabled ? (messagesLoading ? '🔄 Checking for new messages...' : '🔄 Auto-refresh active (5s)') : '⏸️ Auto-refresh paused')}
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
