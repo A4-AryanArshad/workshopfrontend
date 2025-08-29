@@ -41,6 +41,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [lastBookingCount, setLastBookingCount] = useState(0);
   const [hasNewMessages, setHasNewMessages] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Get user info from localStorage
   const currentUserEmail = userEmail || localStorage.getItem('userEmail');
@@ -48,17 +49,17 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
 
   useEffect(() => {
     if (currentUserEmail) {
-      fetchBookingsWithMessages();
+      fetchBookingsWithMessages(true); // Initial load
     } else {
       setLoading(false);
     }
-  }, [currentUserEmail]);
+  }, []);  // Remove currentUserEmail dependency to prevent re-fetching
 
   // Auto-refresh bookings every 5 seconds for real-time messaging
   useEffect(() => {
     if (currentUserEmail && autoRefreshEnabled) {
       const interval = setInterval(() => {
-        fetchBookingsWithMessages();
+        fetchBookingsWithMessages(false); // Background refresh
       }, 5000); // Refresh every 5 seconds for real-time messaging
       
       return () => clearInterval(interval);
@@ -67,7 +68,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
 
   // Manual refresh function
   const refreshBookings = async () => {
-    await fetchBookingsWithMessages();
+    await fetchBookingsWithMessages(false); // Manual refresh
   };
 
   // Toggle auto-refresh function
@@ -75,25 +76,36 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
     setAutoRefreshEnabled(!autoRefreshEnabled);
   };
 
-  const fetchBookingsWithMessages = async () => {
+  const fetchBookingsWithMessages = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
-              const response = await fetch(`${API_BASE_URL}/api/user/${currentUserEmail}/bookings-with-messages`);
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/user/${currentUserEmail}/bookings-with-messages`);
       const data = await response.json();
       
       if (data.success) {
         const newBookings = data.bookings || [];
         
-        // Check for new messages (detect if any booking has more messages than before)
-        const totalCurrentMessages = newBookings.reduce((sum: number, booking: any) => sum + (booking.unreadMessageCount || 0), 0);
-        if (lastBookingCount > 0 && totalCurrentMessages > lastBookingCount) {
-          setHasNewMessages(true);
-          // Clear the notification after 3 seconds
-          setTimeout(() => setHasNewMessages(false), 3000);
+        // Check for new messages (only after initial load)
+        if (!isInitialLoad) {
+          const totalCurrentMessages = newBookings.reduce((sum: number, booking: any) => sum + (booking.unreadMessageCount || 0), 0);
+          if (lastBookingCount > 0 && totalCurrentMessages > lastBookingCount) {
+            setHasNewMessages(true);
+            setTimeout(() => setHasNewMessages(false), 3000);
+          }
+          setLastBookingCount(totalCurrentMessages);
+        } else {
+          // Set initial count on first load
+          const totalCurrentMessages = newBookings.reduce((sum: number, booking: any) => sum + (booking.unreadMessageCount || 0), 0);
+          setLastBookingCount(totalCurrentMessages);
         }
         
         setBookings(newBookings);
-        setLastBookingCount(totalCurrentMessages);
+        setError('');
       } else {
         setError('Failed to fetch bookings');
       }
@@ -102,6 +114,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
       console.error('Error:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -577,7 +590,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
                 marginBottom: '12px',
                 fontWeight: hasNewMessages ? '600' : 'normal'
               }}>
-                {hasNewMessages ? '✨ New messages received!' : (autoRefreshEnabled ? (loading ? '🔄 Checking for new messages...' : '🔄 Auto-refresh active (5s)') : '⏸️ Auto-refresh paused')}
+                {hasNewMessages ? '✨ New messages received!' : (autoRefreshEnabled ? (refreshing ? '🔄 Checking for new messages...' : '🔄 Auto-refresh active (5s)') : '⏸️ Auto-refresh paused')}
               </div>
             </div>
 
@@ -672,20 +685,20 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ userEmail, userName }) => {
               {/* Manual Refresh Button */}
               <button 
                 onClick={refreshBookings}
-                disabled={loading}
+                disabled={refreshing}
                 style={{
-                  background: loading ? '#666' : '#17a2b8',
+                  background: refreshing ? '#666' : '#17a2b8',
                   color: '#fff',
                   border: 'none',
                   padding: 'clamp(8px, 2vw, 10px) clamp(12px, 3vw, 16px)',
                   borderRadius: '6px',
                   fontWeight: 600,
-                  cursor: loading ? 'not-allowed' : 'pointer',
+                  cursor: refreshing ? 'not-allowed' : 'pointer',
                   fontSize: 'clamp(0.75rem, 2vw, 0.85rem)',
                   flexShrink: 0
                 }}
               >
-                {loading ? '⏳' : '🔄'} {loading ? 'Refreshing...' : 'Refresh'}
+                {refreshing ? '⏳' : '🔄'} {refreshing ? 'Refreshing...' : 'Refresh'}
               </button>
             </div>
           </div>
